@@ -8,11 +8,13 @@
   --amber-deep: #c17f1f;
   --teal: #2f6f62;
   --red: #c85c4a;
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -22,11 +24,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, select {
+button,
+input,
+select {
   font-family: inherit;
 }
 
-a { color: inherit; }
+a {
+  color: inherit;
+}
 
 /* ---------- Layout ---------- */
 
@@ -71,7 +77,8 @@ a { color: inherit; }
   gap: 4px;
 }
 
-.sidebar-nav a, .sidebar-nav button {
+.sidebar-nav a,
+.sidebar-nav button {
   background: none;
   border: none;
   color: #cfd8de;
@@ -83,13 +90,14 @@ a { color: inherit; }
   text-decoration: none;
 }
 
-.sidebar-nav a:hover, .sidebar-nav button:hover {
-  background: rgba(255,255,255,0.06);
+.sidebar-nav a:hover,
+.sidebar-nav button:hover {
+  background: rgba(255, 255, 255, 0.06);
   color: #fff;
 }
 
 .sidebar-nav a.active {
-  background: rgba(232,163,61,0.14);
+  background: rgba(232, 163, 61, 0.14);
   color: var(--amber);
   font-weight: 600;
 }
@@ -142,7 +150,9 @@ a { color: inherit; }
   padding: 24px;
 }
 
-.card + .card { margin-top: 20px; }
+.card + .card {
+  margin-top: 20px;
+}
 
 .card-title {
   font-family: var(--font-display);
@@ -173,10 +183,16 @@ td {
   border-bottom: 1px solid var(--line);
 }
 
-tr:last-child td { border-bottom: none; }
+tr:last-child td {
+  border-bottom: none;
+}
 
-tr.clickable { cursor: pointer; }
-tr.clickable:hover { background: var(--paper); }
+tr.clickable {
+  cursor: pointer;
+}
+tr.clickable:hover {
+  background: var(--paper);
+}
 
 /* status pill styled like a satisfaction gauge */
 .pill {
@@ -190,24 +206,41 @@ tr.clickable:hover { background: var(--paper); }
 }
 
 .pill::before {
-  content: '';
+  content: "";
   width: 6px;
   height: 6px;
   border-radius: 50%;
 }
 
-.pill.ativo { background: rgba(47,111,98,0.12); color: var(--teal); }
-.pill.ativo::before { background: var(--teal); }
+.pill.ativo {
+  background: rgba(47, 111, 98, 0.12);
+  color: var(--teal);
+}
+.pill.ativo::before {
+  background: var(--teal);
+}
 
-.pill.suspenso { background: rgba(232,163,61,0.14); color: var(--amber-deep); }
-.pill.suspenso::before { background: var(--amber); }
+.pill.suspenso {
+  background: rgba(232, 163, 61, 0.14);
+  color: var(--amber-deep);
+}
+.pill.suspenso::before {
+  background: var(--amber);
+}
 
-.pill.cancelado { background: rgba(200,92,74,0.12); color: var(--red); }
-.pill.cancelado::before { background: var(--red); }
+.pill.cancelado {
+  background: rgba(200, 92, 74, 0.12);
+  color: var(--red);
+}
+.pill.cancelado::before {
+  background: var(--red);
+}
 
 /* ---------- Forms ---------- */
 
-.field { margin-bottom: 16px; }
+.field {
+  margin-bottom: 16px;
+}
 
 .field label {
   display: block;
@@ -217,7 +250,8 @@ tr.clickable:hover { background: var(--paper); }
   color: var(--ink-soft);
 }
 
-.field input, .field select {
+.field input,
+.field select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -226,7 +260,9 @@ tr.clickable:hover { background: var(--paper); }
   background: var(--paper-raised);
 }
 
-.field input:focus, .field select:focus, button:focus-visible {
+.field input:focus,
+.field select:focus,
+button:focus-visible {
   outline: 2px solid var(--amber);
   outline-offset: 1px;
 }
@@ -243,13 +279,27 @@ tr.clickable:hover { background: var(--paper); }
   cursor: pointer;
 }
 
-.btn-primary { background: var(--ink); color: #fff; }
-.btn-primary:hover { background: #263440; }
+.btn-primary {
+  background: var(--ink);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #263440;
+}
 
-.btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
-.btn-ghost:hover { background: var(--paper); }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+.btn-ghost:hover {
+  background: var(--paper);
+}
 
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 .error-text {
   color: var(--red);
@@ -266,48 +316,471 @@ tr.clickable:hover { background: var(--paper); }
 
 /* ---------- Login ---------- */
 
+/* =========================
+   LOGIN SCREEN
+========================= */
+
 .login-screen {
   min-height: 100vh;
+  width: 100%;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ink);
+
+  padding: 24px;
+  box-sizing: border-box;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(99, 102, 241, 0.1),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(59, 130, 246, 0.08),
+      transparent 32%
+    ),
+    #f8fafc;
+
+  overflow: hidden;
 }
+
+/* =========================
+   CARD
+========================= */
 
 .login-card {
-  width: 360px;
-  background: var(--paper-raised);
-  border-radius: 12px;
-  padding: 36px;
+  width: 100%;
+  max-width: 420px;
+
+  padding: 42px;
+
+  box-sizing: border-box;
+
+  background: rgba(255, 255, 255, 0.92);
+
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+
+  box-shadow:
+    0 30px 80px rgba(15, 23, 42, 0.1),
+    0 8px 25px rgba(15, 23, 42, 0.05);
+
+  backdrop-filter: blur(20px);
+
+  animation: loginCardEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* =========================
+   LOGO
+========================= */
 
 .login-brand {
-  font-family: var(--font-display);
+    display: flex;
+    justify-content: center;
+    /* margin-bottom: 30px; */
+    animation: logoEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.login-brand img {
+  width: 180px;
+  height: auto;
+
+  display: block;
+
+  transition:
+    transform 0.3s ease,
+    filter 0.3s ease;
+}
+
+.login-brand img:hover {
+  transform: scale(1.04);
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.login-header {
+  text-align: center;
+
+  margin-bottom: 32px;
+
+  animation: contentEnter 0.6s ease 0.2s both;
+}
+
+.login-header h1 {
+  margin: 0 0 8px;
+
+  color: #0f172a;
+
+  font-size: 25px;
   font-weight: 700;
-  font-size: 26px;
-  margin-bottom: 4px;
+
+  letter-spacing: -0.6px;
+}
+
+.login-header p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+}
+
+/* =========================
+   FORM
+========================= */
+
+.login-card form {
+  animation: contentEnter 0.6s ease 0.3s both;
+}
+
+/* =========================
+   FIELD
+========================= */
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #334155;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* =========================
+   INPUT WRAPPER
+========================= */
+
+.input-wrapper {
+  position: relative;
+}
+
+/* =========================
+   INPUT ICON
+========================= */
+
+.input-icon {
+  position: absolute;
+
+  left: 15px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  color: #94a3b8;
+
+  font-size: 14px;
+
+  pointer-events: none;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* =========================
+   INPUT
+========================= */
+
+.input-wrapper input {
+  width: 100%;
+  height: 50px;
+
+  box-sizing: border-box;
+
+  padding: 0 15px 0 42px;
+
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+
+  outline: none;
+
+  background: #f8fafc;
+
+  color: #0f172a;
+
+  font-size: 14px;
+
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+
+/* Placeholder */
+
+.input-wrapper input::placeholder {
+  color: #a8b1bf;
+
+  transition: opacity 0.2s ease;
+}
+
+/* Hover */
+
+.input-wrapper input:hover {
+  background: #ffffff;
+
+  border-color: #dce3ec;
+}
+
+/* Focus */
+
+.input-wrapper input:focus {
+  background: #ffffff;
+
+  border-color: #6366f1;
+
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, 0.08),
+    0 4px 12px rgba(99, 102, 241, 0.06);
+}
+
+/* Placeholder desaparece suavemente */
+
+.input-wrapper input:focus::placeholder {
+  opacity: 0.35;
+}
+
+/* Ícone acompanha o foco */
+
+.input-wrapper:focus-within .input-icon {
+  color: #6366f1;
+
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* =========================
+   ERROR
+========================= */
+
+.error-text {
+  margin: -4px 0 16px;
+
+  padding: 11px 13px;
+
+  border-radius: 10px;
+
+  background: #fef2f2;
+
+  border: 1px solid #fecaca;
+
+  color: #dc2626;
+
+  font-size: 13px;
+
+  animation: errorEnter 0.3s ease;
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+.login-button {
+  position: relative;
+
+  width: 100%;
+  height: 50px;
+
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 8px;
+
+  border: none;
+  border-radius: 14px;
+
+  background: #0f172a;
+  color: white;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  overflow: hidden;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
 }
 
-.login-brand .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--amber);
+/* brilho passando pelo botão */
+
+.login-button::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: -120%;
+
+  width: 70%;
+  height: 100%;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+
+  transform: skewX(-20deg);
+
+  transition: left 0.6s ease;
+}
+
+.login-button:hover::before {
+  left: 140%;
+}
+
+.login-button:hover:not(:disabled) {
+  background: #1e293b;
+
   transform: translateY(-2px);
+
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
 }
 
-.login-subtitle {
-  color: var(--ink-soft);
-  font-size: 13px;
-  margin-bottom: 28px;
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
-code {
-  background: var(--paper);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 13px;
+.login-button:disabled {
+  opacity: 0.65;
+
+  cursor: not-allowed;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.login-footer {
+  display: flex;
+  justify-content: space-between;
+
+  margin-top: 30px;
+  padding-top: 20px;
+
+  border-top: 1px solid #eef2f6;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+
+  animation: contentEnter 0.6s ease 0.4s both;
+}
+
+/* =========================
+   ANIMATIONS
+========================= */
+
+@keyframes loginCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(25px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logoEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes contentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes errorEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 480px) {
+  .login-screen {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 32px 24px;
+
+    border-radius: 20px;
+  }
+
+  .login-brand img {
+    width: 110px;
+  }
+
+  .login-header h1 {
+    font-size: 22px;
+  }
+
+  .login-footer {
+    font-size: 10px;
+  }
+}
+
+/* =========================
+   ACCESSIBILITY
+========================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card,
+  .login-brand,
+  .login-header,
+  .login-card form,
+  .login-footer,
+  .error-text {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
 }
