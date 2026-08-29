@@ -357,9 +357,9 @@ const estilos = {
   filtroRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 },
   filtroLabel: { fontSize: 13, fontWeight: 500, color: 'var(--ink-soft)' },
   filtroSelect: { padding: '8px 12px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13, background: '#fff' },
-  statsRow: { display: 'flex', gap: 16 },
+  statsRow: { display: 'flex', gap: 16, flexWrap: 'wrap' },
   statBox: {
-    flex: 1,
+    flex: '1 1 140px',
     background: 'var(--paper)',
     border: '1px solid var(--line)',
     borderRadius: 8,

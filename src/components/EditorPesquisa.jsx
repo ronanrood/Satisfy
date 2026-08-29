@@ -230,12 +230,12 @@ export default function EditorPesquisa({ clienteId }) {
           <label htmlFor="textoBotao">Texto do botão</label>
           <input id="textoBotao" value={textoBotao} onChange={(e) => setTextoBotao(e.target.value)} />
         </div>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div className="field" style={{ flex: '1 1 140px' }}>
             <label htmlFor="corPrimaria">Cor principal</label>
             <input id="corPrimaria" type="color" value={corPrimaria} onChange={(e) => setCorPrimaria(e.target.value)} style={{ height: 40, padding: 4 }} />
           </div>
-          <div className="field" style={{ flex: 2 }}>
+          <div className="field" style={{ flex: '2 1 220px' }}>
             <label htmlFor="boasVindas">Frase da tela de nota (padrão)</label>
             <input id="boasVindas" value={textoBoasVindas} onChange={(e) => setTextoBoasVindas(e.target.value)} />
           </div>
@@ -262,13 +262,13 @@ export default function EditorPesquisa({ clienteId }) {
         {perguntas.map((p, indice) => {
           const info = infoTipo(p.tipo)
           return (
-            <div key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14, borderBottom: '1px solid var(--line)', paddingBottom: 14 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 8 }}>
+            <div key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14, borderBottom: '1px solid var(--line)', paddingBottom: 14, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: 6, paddingTop: 0 }}>
                 <button className="btn-ghost" style={{ padding: '2px 8px' }} onClick={() => moverPergunta(indice, -1)} disabled={indice === 0} type="button">↑</button>
                 <button className="btn-ghost" style={{ padding: '2px 8px' }} onClick={() => moverPergunta(indice, 1)} disabled={indice === perguntas.length - 1} type="button">↓</button>
               </div>
 
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: '1 1 220px', minWidth: 0 }}>
                 <input
                   value={p.texto}
                   onChange={(e) => atualizarPergunta(p.id, 'texto', e.target.value)}

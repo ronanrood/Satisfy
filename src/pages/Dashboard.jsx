@@ -29,7 +29,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <h2 className="card-title" style={{ marginBottom: 0 }}>
             {clientes.length} cliente{clientes.length !== 1 ? 's' : ''}
           </h2>
