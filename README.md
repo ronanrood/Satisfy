@@ -31,7 +31,7 @@ VITE_SUPABASE_ANON_KEY=sua-chave-anon
 ## 3. Rodar localmente
 
 ```bash
-npm run dev
+npm run devnpm run build
 ```
 
 Acesse `http://localhost:5173` e entre com o e-mail/senha do usuário Mestre.
