@@ -60,23 +60,87 @@ export default function Dashboard() {
                 <th>Nome</th>
                 <th>Plano</th>
                 <th>Status</th>
+                <th style={{ width: 160 }}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {clientes.map((c) => (
-                <tr key={c.id} className="clickable" onClick={() => navigate(`/clientes/${c.id}`)}>
-                  <td>{c.nome}</td>
-                  <td style={{ textTransform: 'capitalize' }}>{c.plano}</td>
-                  <td>
-                    <span className={`pill ${c.status}`}>{c.status}</span>
-                  </td>
-                </tr>
+                <LinhaCliente key={c.id} cliente={c} onMudou={buscarClientes} onAbrir={() => navigate(`/clientes/${c.id}`)} />
               ))}
             </tbody>
           </table>
         )}
       </div>
     </Layout>
+  )
+}
+
+function LinhaCliente({ cliente, onMudou, onAbrir }) {
+  const [editando, setEditando] = useState(false)
+  const [nome, setNome] = useState(cliente.nome)
+  const [plano, setPlano] = useState(cliente.plano)
+  const [status, setStatus] = useState(cliente.status)
+  const [salvando, setSalvando] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
+
+  async function salvar() {
+    setSalvando(true)
+    await supabase.from('clientes').update({ nome, plano, status }).eq('id', cliente.id)
+    setSalvando(false)
+    setEditando(false)
+    onMudou()
+  }
+
+  async function excluir() {
+    const confirmado = window.confirm(
+      `Excluir "${cliente.nome}"? Isso apaga TODAS as unidades, totens, pesquisas e respostas desse cliente. Não pode ser desfeito.`
+    )
+    if (!confirmado) return
+    setExcluindo(true)
+    await supabase.from('clientes').delete().eq('id', cliente.id)
+    onMudou()
+  }
+
+  if (editando) {
+    return (
+      <tr>
+        <td><input value={nome} onChange={(e) => setNome(e.target.value)} style={estilos.inputInline} autoFocus /></td>
+        <td>
+          <select value={plano} onChange={(e) => setPlano(e.target.value)} style={estilos.inputInline}>
+            <option value="trial">Trial</option>
+            <option value="basico">Básico</option>
+            <option value="pro">Pro</option>
+          </select>
+        </td>
+        <td>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} style={estilos.inputInline}>
+            <option value="ativo">Ativo</option>
+            <option value="suspenso">Suspenso</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </td>
+        <td style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-primary" style={estilos.btnPequeno} onClick={salvar} disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Salvar'}
+          </button>
+          <button className="btn-ghost" style={estilos.btnPequeno} onClick={() => setEditando(false)}>Cancelar</button>
+        </td>
+      </tr>
+    )
+  }
+
+  return (
+    <tr className="clickable" onClick={onAbrir}>
+      <td>{cliente.nome}</td>
+      <td style={{ textTransform: 'capitalize' }}>{cliente.plano}</td>
+      <td><span className={`pill ${cliente.status}`}>{cliente.status}</span></td>
+      <td style={{ display: 'flex', gap: 8 }} onClick={(e) => e.stopPropagation()}>
+        <button className="btn-ghost" style={estilos.btnPequeno} onClick={() => setEditando(true)}>Editar</button>
+        <button className="btn-ghost" style={{ ...estilos.btnPequeno, color: 'var(--red)' }} onClick={excluir} disabled={excluindo}>
+          {excluindo ? 'Excluindo…' : 'Excluir'}
+        </button>
+      </td>
+    </tr>
   )
 }
 
@@ -116,4 +180,9 @@ function NovoClienteForm({ onCriado }) {
       </button>
     </form>
   )
+}
+
+const estilos = {
+  inputInline: { width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 13 },
+  btnPequeno: { padding: '6px 12px', fontSize: 13 },
 }

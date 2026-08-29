@@ -12,6 +12,13 @@ const ETAPAS = {
 
 const TEMPO_RESET_MS = 8000
 
+// tipos que geram uma "nota" numérica pro resumo do dashboard
+const TIPOS_NOTA = ['estrelas', 'carinhas', 'nps', 'nota', 'escala_opiniao']
+// tipos de texto livre que entram no campo "comentário" do resumo
+const TIPOS_TEXTO = ['comentario', 'texto_curto']
+// tipos informativos: só mostram conteúdo e avançam, não coletam resposta
+const TIPOS_INFORMATIVOS = ['boas_vindas', 'imagem', 'encerramento']
+
 export default function Totem() {
   const { token } = useParams()
   const [etapa, setEtapa] = useState(ETAPAS.CARREGANDO)
@@ -22,6 +29,8 @@ export default function Totem() {
   const [indice, setIndice] = useState(0)
   const [respostas, setRespostas] = useState([]) // [{ pergunta_id, tipo, resposta }]
   const [textoAtual, setTextoAtual] = useState('')
+  const [selecoesAtuais, setSelecoesAtuais] = useState([])
+  const [mensagemFinal, setMensagemFinal] = useState(null)
   const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
@@ -77,6 +86,8 @@ export default function Totem() {
     setIndice(0)
     setRespostas([])
     setTextoAtual('')
+    setSelecoesAtuais([])
+    setMensagemFinal(null)
     setEtapa(ETAPAS.BANNER)
   }, [])
 
@@ -92,7 +103,6 @@ export default function Totem() {
 
   function iniciar() {
     if (perguntas.length === 0) {
-      // sem perguntas cadastradas ainda — evita travar o totem
       finalizar([])
       return
     }
@@ -100,10 +110,15 @@ export default function Totem() {
   }
 
   function responderEAvancar(valor) {
+    if (perguntaAtual.tipo === 'encerramento') {
+      setMensagemFinal(perguntaAtual.texto)
+    }
+
     const novaResposta = { pergunta_id: perguntaAtual.id, tipo: perguntaAtual.tipo, resposta: valor }
     const todasRespostas = [...respostas, novaResposta]
     setRespostas(todasRespostas)
     setTextoAtual('')
+    setSelecoesAtuais([])
 
     if (indice + 1 < perguntas.length) {
       setIndice(indice + 1)
@@ -115,9 +130,9 @@ export default function Totem() {
   async function finalizar(todasRespostas) {
     setEnviando(true)
 
-    const primeiraNota = todasRespostas.find((r) => r.tipo !== 'texto')
+    const primeiraNota = todasRespostas.find((r) => TIPOS_NOTA.includes(r.tipo))
     const textosCombinados = todasRespostas
-      .filter((r) => r.tipo === 'texto' && r.resposta?.trim())
+      .filter((r) => TIPOS_TEXTO.includes(r.tipo) && typeof r.resposta === 'string' && r.resposta.trim())
       .map((r) => r.resposta.trim())
       .join(' | ')
 
@@ -158,6 +173,8 @@ export default function Totem() {
           corPrimaria={corPrimaria}
           textoAtual={textoAtual}
           setTextoAtual={setTextoAtual}
+          selecoesAtuais={selecoesAtuais}
+          setSelecoesAtuais={setSelecoesAtuais}
           enviando={enviando}
           onResponder={responderEAvancar}
         />
@@ -166,7 +183,7 @@ export default function Totem() {
       {etapa === ETAPAS.OBRIGADO && (
         <div style={estilos.obrigadoWrap}>
           <div style={{ ...estilos.check, background: corPrimaria }}>✓</div>
-          <h1 style={estilos.titulo}>Obrigado pela sua avaliação!</h1>
+          <h1 style={estilos.titulo}>{mensagemFinal || 'Obrigado pela sua avaliação!'}</h1>
         </div>
       )}
     </div>
@@ -191,12 +208,29 @@ function TelaBanner({ config, corPrimaria, onIniciar }) {
   )
 }
 
-function TelaPergunta({ pergunta, corPrimaria, textoAtual, setTextoAtual, enviando, onResponder }) {
+function TelaPergunta({ pergunta, corPrimaria, textoAtual, setTextoAtual, selecoesAtuais, setSelecoesAtuais, enviando, onResponder }) {
+  const tipo = pergunta.tipo
+
+  // Tipos informativos: só exibem conteúdo (com imagem opcional) e um botão de continuar
+  if (['boas_vindas', 'imagem', 'encerramento'].includes(tipo)) {
+    return (
+      <div style={{ width: '100%', maxWidth: 560 }}>
+        {pergunta.imagem_url && (
+          <img src={pergunta.imagem_url} alt="" style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 12, marginBottom: 28, objectFit: 'contain' }} />
+        )}
+        <h1 style={estilos.titulo}>{pergunta.texto}</h1>
+        <button style={{ ...estilos.botaoEnviar, background: corPrimaria, flex: 'none', padding: '14px 48px' }} onClick={() => onResponder(null)} disabled={enviando}>
+          {tipo === 'encerramento' ? (enviando ? 'Enviando…' : 'Concluir') : 'Continuar'}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div style={{ width: '100%', maxWidth: 520 }}>
       <h1 style={estilos.titulo}>{pergunta.texto}</h1>
 
-      {pergunta.tipo === 'estrelas' && (
+      {tipo === 'estrelas' && (
         <div style={estilos.estrelasRow}>
           {[1, 2, 3, 4, 5].map((v) => (
             <button key={v} style={{ ...estilos.estrelaBotao, color: corPrimaria }} onClick={() => onResponder(v)} aria-label={`${v} estrelas`}>★</button>
@@ -204,7 +238,7 @@ function TelaPergunta({ pergunta, corPrimaria, textoAtual, setTextoAtual, envian
         </div>
       )}
 
-      {pergunta.tipo === 'carinhas' && (
+      {tipo === 'carinhas' && (
         <div style={estilos.carinhasRow}>
           {[{ v: 1, e: '😡' }, { v: 2, e: '😕' }, { v: 3, e: '😐' }, { v: 4, e: '🙂' }, { v: 5, e: '😄' }].map((o) => (
             <button key={o.v} style={estilos.carinhaBotao} onClick={() => onResponder(o.v)}>{o.e}</button>
@@ -212,7 +246,7 @@ function TelaPergunta({ pergunta, corPrimaria, textoAtual, setTextoAtual, envian
         </div>
       )}
 
-      {pergunta.tipo === 'nps' && (
+      {(tipo === 'nps' || tipo === 'nota') && (
         <div style={estilos.npsGrid}>
           {Array.from({ length: 11 }, (_, i) => i).map((v) => (
             <button key={v} style={{ ...estilos.npsBotao, borderColor: corPrimaria }} onClick={() => onResponder(v)}>{v}</button>
@@ -220,22 +254,106 @@ function TelaPergunta({ pergunta, corPrimaria, textoAtual, setTextoAtual, envian
         </div>
       )}
 
-      {pergunta.tipo === 'texto' && (
+      {tipo === 'escala_opiniao' && (
+        <div style={estilos.npsGrid}>
+          {Array.from(
+            { length: (pergunta.escala_max ?? 5) - (pergunta.escala_min ?? 1) + 1 },
+            (_, i) => (pergunta.escala_min ?? 1) + i
+          ).map((v) => (
+            <button key={v} style={{ ...estilos.npsBotao, borderColor: corPrimaria }} onClick={() => onResponder(v)}>{v}</button>
+          ))}
+        </div>
+      )}
+
+      {(tipo === 'comentario' || tipo === 'texto_curto') && (
         <>
-          <textarea
-            style={estilos.textarea}
-            value={textoAtual}
-            onChange={(e) => setTextoAtual(e.target.value)}
-            placeholder="Escreva sua resposta (opcional)"
-            rows={4}
-            autoFocus
-          />
+          {tipo === 'comentario' ? (
+            <textarea
+              style={estilos.textarea}
+              value={textoAtual}
+              onChange={(e) => setTextoAtual(e.target.value)}
+              placeholder="Escreva sua resposta (opcional)"
+              rows={4}
+              autoFocus
+            />
+          ) : (
+            <input
+              style={estilos.inputCurto}
+              value={textoAtual}
+              onChange={(e) => setTextoAtual(e.target.value)}
+              placeholder="Escreva sua resposta (opcional)"
+              autoFocus
+            />
+          )}
           <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
             <button style={estilos.botaoPular} onClick={() => onResponder('')} disabled={enviando}>Pular</button>
             <button style={{ ...estilos.botaoEnviar, background: corPrimaria }} onClick={() => onResponder(textoAtual.trim())} disabled={enviando}>
               {enviando ? 'Enviando…' : 'Continuar'}
             </button>
           </div>
+        </>
+      )}
+
+      {tipo === 'data' && (
+        <>
+          <input
+            type="date"
+            style={estilos.inputCurto}
+            value={textoAtual}
+            onChange={(e) => setTextoAtual(e.target.value)}
+            autoFocus
+          />
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button style={estilos.botaoPular} onClick={() => onResponder(null)} disabled={enviando}>Pular</button>
+            <button style={{ ...estilos.botaoEnviar, background: corPrimaria }} onClick={() => onResponder(textoAtual || null)} disabled={enviando || !textoAtual}>
+              {enviando ? 'Enviando…' : 'Continuar'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {tipo === 'escolha_unica' && (
+        <div style={estilos.opcoesColuna}>
+          {(pergunta.opcoes || []).map((opcao) => (
+            <button key={opcao} style={{ ...estilos.opcaoBotao, borderColor: corPrimaria }} onClick={() => onResponder(opcao)}>
+              {opcao}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tipo === 'escolha_multipla' && (
+        <>
+          <div style={estilos.opcoesColuna}>
+            {(pergunta.opcoes || []).map((opcao) => {
+              const marcada = selecoesAtuais.includes(opcao)
+              return (
+                <button
+                  key={opcao}
+                  style={{
+                    ...estilos.opcaoBotao,
+                    borderColor: corPrimaria,
+                    background: marcada ? corPrimaria : '#fff',
+                    color: marcada ? '#fff' : 'var(--ink, #16212b)',
+                  }}
+                  onClick={() =>
+                    setSelecoesAtuais((prev) =>
+                      prev.includes(opcao) ? prev.filter((o) => o !== opcao) : [...prev, opcao]
+                    )
+                  }
+                >
+                  {marcada ? '✓ ' : ''}{opcao}
+                </button>
+              )
+            })}
+          </div>
+          <button
+            style={{ ...estilos.botaoEnviar, background: corPrimaria, flex: 'none', padding: '14px 48px', marginTop: 20 }}
+            onClick={() => onResponder(selecoesAtuais)}
+            disabled={enviando}
+          >
+            {enviando ? 'Enviando…' : 'Continuar'}
+          </button>
         </>
       )}
     </div>
@@ -303,8 +421,11 @@ const estilos = {
   npsGrid: { display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', maxWidth: 560, margin: '0 auto' },
   npsBotao: { width: 48, height: 48, borderRadius: 8, border: '2px solid', background: '#fff', fontSize: 18, fontWeight: 600, cursor: 'pointer' },
   textarea: { width: '100%', padding: 16, borderRadius: 10, border: '1px solid #e1e6ea', fontSize: 16, fontFamily: "'Inter', sans-serif", resize: 'none' },
+  inputCurto: { width: '100%', padding: 14, borderRadius: 10, border: '1px solid #e1e6ea', fontSize: 16, fontFamily: "'Inter', sans-serif" },
   botaoPular: { flex: 1, padding: '14px 0', borderRadius: 8, border: '1px solid #e1e6ea', background: '#fff', color: '#3d4f5c', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   botaoEnviar: { flex: 2, padding: '14px 0', borderRadius: 8, border: 'none', color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   obrigadoWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
   check: { width: 72, height: 72, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 34, marginBottom: 24 },
+  opcoesColuna: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%' },
+  opcaoBotao: { padding: '14px 20px', borderRadius: 10, border: '2px solid', background: '#fff', fontSize: 16, fontWeight: 500, cursor: 'pointer', textAlign: 'left' },
 }

@@ -31,7 +31,7 @@ VITE_SUPABASE_ANON_KEY=sua-chave-anon
 ## 3. Rodar localmente
 
 ```bash
-npm run devnpm run build
+npm run dev
 ```
 
 Acesse `http://localhost:5173` e entre com o e-mail/senha do usuário Mestre.
@@ -46,14 +46,21 @@ projeto na Vercel, adicione as mesmas duas variáveis de ambiente do
 ## O que essa versão já faz
 
 - Login (Supabase Auth) restrito ao papel Mestre
-- Listar e cadastrar clientes
-- Dentro de um cliente: cadastrar unidades e gerar totens (cada totem
-  recebe um token único, mostrado como `/totem/SEU-TOKEN`)
+- **Listar e cadastrar clientes**, com **edição e exclusão** direto na
+  lista (nome, plano, status) — sem precisar abrir o Supabase
+- Dentro de um cliente: **cadastrar, editar e excluir unidades e
+  totens** (nome, endereço, unidade vinculada, ativo/inativo), e
+  **editar/excluir o próprio cliente** — tudo com confirmação antes
+  de qualquer exclusão, já que apaga em cascata (cliente → unidades →
+  totens → respostas)
 - **Editor de pesquisa por cliente**, dentro da página do cliente:
-  - Banner de abertura — **upload direto da imagem** (Supabase Storage)
+  - Banner de abertura — upload direto da imagem (Supabase Storage)
     ou colar uma URL já hospedada, além de cor e texto do botão
-  - Perguntas customizáveis, cada uma com seu formato (estrelas, NPS,
-    carinhas ou texto livre) e ordem ajustável
+  - Perguntas customizáveis, com todos estes formatos: Boas-vindas,
+    Imagem, Múltipla-escolha (1 opção), Múltipla-seleção (várias),
+    NPS (0-10), Comentário (texto longo), Texto curto, Data,
+    Nota (0-10), Estrelas (1-5), Carinhas (1-5), Escala de opinião
+    (numérica configurável) e Encerramento — em qualquer ordem
 - Tela pública `/totem/:token` — a que roda no PC/tablet do cliente,
   sem login: mostra o banner clicável, depois cada pergunta em sua
   própria tela na ordem cadastrada, agradece e reinicia sozinha
