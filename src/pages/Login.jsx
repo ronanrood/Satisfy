@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
 import logo from "../img/logo.png";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiArrowRight } from "react-icons/fi";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -27,6 +29,9 @@ export default function Login() {
 
   return (
     <div className="login-screen">
+      <div className="login-bg-glow login-bg-glow-1"></div>
+      <div className="login-bg-glow login-bg-glow-2"></div>
+      
       <div className="login-card">
         {/* Logo */}
         <div className="login-brand">
@@ -38,13 +43,15 @@ export default function Login() {
           <p>Entre no painel para continuar</p>
         </div>
 
-        <form onSubmit={entrar}>
+        <form onSubmit={entrar} className="login-form">
           {/* E-mail */}
           <div className="field">
             <label htmlFor="email">E-mail</label>
 
             <div className="input-wrapper">
-              <span className="input-icon">✉</span>
+              <span className="input-icon">
+                <FiMail size={18} />
+              </span>
 
               <input
                 placeholder="Digite seu e-mail"
@@ -63,21 +70,37 @@ export default function Login() {
             <label htmlFor="senha">Senha</label>
 
             <div className="input-wrapper">
-              <span className="input-icon">●</span>
+              <span className="input-icon">
+                <FiLock size={18} />
+              </span>
 
               <input
                 placeholder="Digite sua senha"
                 id="senha"
-                type="password"
+                type={mostrarSenha ? "text" : "password"}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
               />
+
+              <button
+                type="button"
+                className="toggle-password-btn"
+                onClick={() => setMostrarSenha(!mostrarSenha)}
+                title={mostrarSenha ? "Ocultar senha" : "Ver senha"}
+              >
+                {mostrarSenha ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
             </div>
           </div>
 
           {/* Erro */}
-          {erro && <div className="error-text">{erro}</div>}
+          {erro && (
+            <div className="error-text">
+              <FiAlertCircle size={16} />
+              <span>{erro}</span>
+            </div>
+          )}
 
           {/* Botão */}
           <button
@@ -85,15 +108,18 @@ export default function Login() {
             type="submit"
             disabled={enviando}
           >
-            {enviando ? "Entrando..." : "Entrar"}
+            <span>{enviando ? "Entrando..." : "Entrar no Painel"}</span>
+            {!enviando && <FiArrowRight size={18} />}
           </button>
         </form>
 
         <div className="login-footer">
           <span>© 2026 Satisfy</span>
+          <span className="dot">•</span>
           <span>Pesquisa & satisfação</span>
         </div>
       </div>
     </div>
   );
 }
+
