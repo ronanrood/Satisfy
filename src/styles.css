@@ -37,13 +37,16 @@ a {
 /* ---------- Layout ---------- */
 
 .shell {
-  display: flex;
   min-height: 100vh;
 }
 
 .sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 240px;
-  flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
   background: var(--ink);
   color: #fff;
   padding: 28px 18px;
@@ -51,6 +54,7 @@ a {
   flex-direction: column;
   gap: 28px;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 30;
 }
 
 .sidebar-logo {
@@ -155,6 +159,28 @@ a {
   text-overflow: ellipsis;
 }
 
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cfd8de;
+  text-align: left;
+  font-size: 14px;
+  padding: 11px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.sidebar-logout:hover {
+  background: rgba(200, 92, 74, 0.14);
+  border-color: rgba(200, 92, 74, 0.4);
+  color: #f0a898;
+}
+
 .hamburger-btn {
   display: none;
 }
@@ -165,6 +191,7 @@ a {
 
 .main {
   flex: 1;
+  margin-left: 240px;
   padding: 40px 48px;
   max-width: 1040px;
   width: 100%;
@@ -175,6 +202,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-left: 240px;
   padding: 18px 48px;
   border-bottom: 1px solid var(--line);
   background: #fff;
@@ -183,6 +211,7 @@ a {
 }
 
 .client-main {
+  margin-left: 240px;
   padding: 32px 48px;
   max-width: 1040px;
   width: 100%;
@@ -893,10 +922,8 @@ button:focus-visible {
   }
 
   .sidebar {
-    position: fixed;
     top: 0;
     left: 0;
-    height: 100vh;
     z-index: 45;
     transform: translateX(-100%);
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
@@ -917,14 +944,17 @@ button:focus-visible {
   }
 
   .main {
+    margin-left: 0 !important;
     padding: 80px 20px 40px !important;
   }
 
   .client-header {
+    margin-left: 0 !important;
     padding: 16px 20px 16px 64px !important;
   }
 
   .client-main {
+    margin-left: 0 !important;
     padding: 24px 20px !important;
   }
 
