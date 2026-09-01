@@ -2,7 +2,11 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import ClienteDetalhe from './pages/ClienteDetalhe'
+import ClienteLayout from './components/ClienteLayout'
+import ClienteDashboardPage from './pages/ClienteDashboardPage'
+import ClientePesquisasPage from './pages/ClientePesquisasPage'
+import ClienteUnidadesPage from './pages/ClienteUnidadesPage'
+import ClienteDispositivosPage from './pages/ClienteDispositivosPage'
 import Totem from './pages/Totem'
 import ClientePainel from './pages/ClientePainel'
 
@@ -54,7 +58,13 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
-      <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+      <Route path="/clientes/:id" element={<ClienteLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ClienteDashboardPage />} />
+        <Route path="pesquisas" element={<ClientePesquisasPage />} />
+        <Route path="unidades" element={<ClienteUnidadesPage />} />
+        <Route path="dispositivos" element={<ClienteDispositivosPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

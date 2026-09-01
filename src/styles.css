@@ -57,10 +57,21 @@ a {
   padding: 0 6px 4px;
 }
 
+.sidebar-logo a {
+  display: inline-block;
+  line-height: 0;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-logo a:hover {
+  opacity: 0.8;
+}
+
 .sidebar-logo img {
   height: 30px;
   width: auto;
   display: block;
+  cursor: pointer;
 }
 
 .sidebar-brand {
@@ -150,82 +161,6 @@ a {
 
 .sidebar-overlay {
   display: none;
-}
-
-/* ---------- Mobile: menu vira hamburguer recolhível ---------- */
-@media (max-width: 880px) {
-  .hamburger-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 40;
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    border: none;
-    background: var(--ink);
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    box-shadow: 0 6px 16px rgba(22, 33, 43, 0.25);
-  }
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    z-index: 45;
-    transform: translateX(-100%);
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
-  }
-
-  .sidebar.open,
-  .sidebar.aberta {
-    transform: translateX(0);
-  }
-
-  .sidebar-overlay.open {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    z-index: 44;
-    animation: overlayEnter 0.2s ease;
-  }
-
-  .main {
-    padding: 80px 20px 40px;
-  }
-
-  .client-header {
-    padding: 16px 20px 16px 64px;
-  }
-
-  .client-main {
-    padding: 24px 20px;
-  }
-
-  .page-title {
-    font-size: 24px;
-  }
-
-  .card {
-    padding: 18px;
-    overflow-x: auto;
-  }
-
-  table {
-    min-width: 480px;
-  }
-}
-
-@keyframes overlayEnter {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .main {
@@ -922,5 +857,87 @@ button:focus-visible {
   *::before,
   *::after {
     transition: none !important;
+  }
+}
+
+/* =========================
+   MOBILE: menu vira hamburguer recolhível
+   (fica no final do arquivo de propósito — precisa vir DEPOIS
+   das regras .main/.card/table/.page-title/.client-header/.client-main
+   pra conseguir sobrescrever no mobile)
+========================= */
+
+@keyframes overlayEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 880px) {
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 40;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: none;
+    background: var(--ink);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(22, 33, 43, 0.25);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 45;
+    transform: translateX(-100%);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
+  }
+
+  .sidebar.open,
+  .sidebar.aberta {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 44;
+    animation: overlayEnter 0.2s ease;
+  }
+
+  .main {
+    padding: 80px 20px 40px !important;
+  }
+
+  .client-header {
+    padding: 16px 20px 16px 64px !important;
+  }
+
+  .client-main {
+    padding: 24px 20px !important;
+  }
+
+  .page-title {
+    font-size: 24px !important;
+  }
+
+  .card {
+    padding: 18px !important;
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 480px;
   }
 }

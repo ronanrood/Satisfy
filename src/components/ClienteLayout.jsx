@@ -76,7 +76,9 @@ export default function ClienteLayout() {
 
       <aside className={`sidebar${menuAberto ? ' open' : ''}`}>
         <div className="sidebar-logo">
-          <img src={logo} alt="Satisfy" />
+          <Link to="/">
+            <img src={logo} alt="Satisfy" />
+          </Link>
         </div>
 
         <nav className="sidebar-nav">
