@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { FiPlus, FiEdit2, FiTrash2, FiMapPin, FiGrid } from 'react-icons/fi'
 
 export default function ClienteUnidadesPage() {
   const { clienteId } = useOutletContext()
@@ -20,38 +21,55 @@ export default function ClienteUnidadesPage() {
   }
 
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <h2 className="card-title" style={{ marginBottom: 0 }}>Unidades ({unidades.length})</h2>
-        <button className="btn btn-primary" onClick={() => setMostrarForm(!mostrarForm)}>
-          {mostrarForm ? 'Cancelar' : '+ Nova unidade'}
+    <div>
+      <div className="page-header-container">
+        <div className="page-title-group">
+          <div className="page-eyebrow">Gestão de Estrutura</div>
+          <h1 className="page-title">
+            <FiGrid style={{ marginRight: 8, verticalAlign: 'middle' }} />
+            Unidades
+          </h1>
+          <p className="page-subtitle">Locais físicos e filiais cadastrados para coleta de satisfação.</p>
+        </div>
+
+        <button className="btn-action-primary" onClick={() => setMostrarForm(!mostrarForm)}>
+          <FiPlus />
+          {mostrarForm ? 'CANCELAR' : 'NOVA UNIDADE'}
         </button>
       </div>
 
       {mostrarForm && (
-        <NovaUnidadeForm clienteId={clienteId} onCriado={() => { setMostrarForm(false); buscar() }} />
+        <div className="panel-card form-card-box">
+          <NovaUnidadeForm clienteId={clienteId} onCriado={() => { setMostrarForm(false); buscar() }} />
+        </div>
       )}
 
-      {carregando ? (
-        <p className="empty-state">Carregando…</p>
-      ) : unidades.length === 0 ? (
-        <p className="empty-state">Nenhuma unidade cadastrada ainda.</p>
-      ) : (
-        <table style={{ marginTop: 20 }}>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Endereço</th>
-              <th style={{ width: 160 }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {unidades.map((u) => (
-              <LinhaUnidade key={u.id} unidade={u} onMudou={buscar} />
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="panel-card table-wrapper">
+        {carregando ? (
+          <div className="empty-state">
+            <p>Carregando unidades...</p>
+          </div>
+        ) : unidades.length === 0 ? (
+          <div className="empty-state">
+            <p>Nenhuma unidade cadastrada ainda. Clique em "Nova unidade" para começar.</p>
+          </div>
+        ) : (
+          <table className="clean-table data-table">
+            <thead>
+              <tr>
+                <th>NOME DA UNIDADE</th>
+                <th>ENDEREÇO</th>
+                <th style={{ textAlign: 'right', paddingRight: '20px' }}>AÇÕES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unidades.map((u) => (
+                <LinhaUnidade key={u.id} unidade={u} onMudou={buscar} />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   )
 }
@@ -62,7 +80,8 @@ function LinhaUnidade({ unidade, onMudou }) {
   const [endereco, setEndereco] = useState(unidade.endereco || '')
   const [salvando, setSalvando] = useState(false)
 
-  async function salvar() {
+  async function salvar(e) {
+    e.stopPropagation()
     setSalvando(true)
     await supabase.from('unidades').update({ nome, endereco }).eq('id', unidade.id)
     setSalvando(false)
@@ -70,7 +89,8 @@ function LinhaUnidade({ unidade, onMudou }) {
     onMudou()
   }
 
-  async function excluir() {
+  async function excluir(e) {
+    e.stopPropagation()
     const confirmado = window.confirm(`Excluir a unidade "${unidade.nome}"? Isso apaga os totens e respostas dela também.`)
     if (!confirmado) return
     await supabase.from('unidades').delete().eq('id', unidade.id)
@@ -79,24 +99,43 @@ function LinhaUnidade({ unidade, onMudou }) {
 
   if (editando) {
     return (
-      <tr>
-        <td><input value={nome} onChange={(e) => setNome(e.target.value)} style={estilos.inputInline} autoFocus /></td>
-        <td><input value={endereco} onChange={(e) => setEndereco(e.target.value)} style={estilos.inputInline} /></td>
-        <td style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-primary" style={estilos.btnPequeno} onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-          <button className="btn-ghost" style={estilos.btnPequeno} onClick={() => setEditando(false)}>Cancelar</button>
+      <tr className="editing-row">
+        <td>
+          <input className="input-inline" value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
+        </td>
+        <td>
+          <input className="input-inline" value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Endereço..." />
+        </td>
+        <td className="actions-cell">
+          <button className="btn-sm btn-save" onClick={salvar} disabled={salvando}>
+            {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+          <button className="btn-sm btn-cancel" onClick={() => setEditando(false)}>
+            Cancelar
+          </button>
         </td>
       </tr>
     )
   }
 
   return (
-    <tr>
-      <td>{unidade.nome}</td>
-      <td>{unidade.endereco || '—'}</td>
-      <td style={{ display: 'flex', gap: 8 }}>
-        <button className="btn-ghost" style={estilos.btnPequeno} onClick={() => setEditando(true)}>Editar</button>
-        <button className="btn-ghost" style={{ ...estilos.btnPequeno, color: 'var(--red)' }} onClick={excluir}>Excluir</button>
+    <tr className="data-row">
+      <td className="cell-primary">
+        <div className="client-name">{unidade.nome}</div>
+      </td>
+      <td>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#64748b' }}>
+          <FiMapPin style={{ fontSize: 13, color: '#94a3b8' }} />
+          {unidade.endereco || '—'}
+        </span>
+      </td>
+      <td className="actions-cell">
+        <button className="action-btn" title="Editar" onClick={() => setEditando(true)}>
+          <FiEdit2 />
+        </button>
+        <button className="action-btn delete" title="Excluir" onClick={excluir}>
+          <FiTrash2 />
+        </button>
       </td>
     </tr>
   )
@@ -119,24 +158,40 @@ function NovaUnidadeForm({ clienteId, onCriado }) {
   }
 
   return (
-    <form onSubmit={salvar} style={{ marginTop: 20, borderTop: '1px solid var(--line)', paddingTop: 20 }}>
-      <div className="field">
-        <label htmlFor="nomeUnidade">Nome da unidade</label>
-        <input id="nomeUnidade" value={nome} onChange={(e) => setNome(e.target.value)} required autoFocus />
+    <form onSubmit={salvar} className="compact-form">
+      <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#1e293b' }}>Cadastrar Nova Unidade</h3>
+      <div className="form-grid">
+        <div className="form-field">
+          <label htmlFor="nomeUnidade">Nome da unidade</label>
+          <input
+            id="nomeUnidade"
+            className="text-input"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Ex: Matriz Centro"
+            required
+            autoFocus
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="endereco">Endereço (opcional)</label>
+          <input
+            id="endereco"
+            className="text-input"
+            value={endereco}
+            onChange={(e) => setEndereco(e.target.value)}
+            placeholder="Ex: Av. Principal, 100"
+          />
+        </div>
       </div>
-      <div className="field">
-        <label htmlFor="endereco">Endereço (opcional)</label>
-        <input id="endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} />
-      </div>
+
       {erro && <div className="error-text">{erro}</div>}
-      <button className="btn btn-primary" type="submit" disabled={enviando}>
-        {enviando ? 'Salvando…' : 'Salvar unidade'}
-      </button>
+
+      <div className="form-footer">
+        <button className="btn-action-primary" type="submit" disabled={enviando}>
+          {enviando ? 'Salvando…' : 'Salvar Unidade'}
+        </button>
+      </div>
     </form>
   )
-}
-
-const estilos = {
-  inputInline: { width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 13 },
-  btnPequeno: { padding: '6px 12px', fontSize: 13 },
 }

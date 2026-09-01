@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import Layout from '../components/Layout'
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiExternalLink, FiUsers } from 'react-icons/fi'
 
 export default function Dashboard() {
   const [clientes, setClientes] = useState([])
+  const [busca, setBusca] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [mostrarForm, setMostrarForm] = useState(false)
   const navigate = useNavigate()
@@ -15,57 +17,101 @@ export default function Dashboard() {
 
   async function buscarClientes() {
     setCarregando(true)
-    const { data } = await supabase.from('clientes').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('clientes')
+      .select('*')
+      .order('created_at', { ascending: false })
     setClientes(data || [])
     setCarregando(false)
   }
 
+  const clientesFiltrados = useMemo(() => {
+    return clientes.filter((c) =>
+      c.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+      c.plano?.toLowerCase().includes(busca.toLowerCase()) ||
+      c.status?.toLowerCase().includes(busca.toLowerCase())
+    )
+  }, [clientes, busca])
+
   return (
     <Layout>
-      <div className="page-header">
-        <div className="page-eyebrow">Painel Mestre</div>
-        <h1 className="page-title">Clientes</h1>
-        <p className="page-subtitle">Empresas com licença ativa do Satisfy.</p>
-      </div>
-
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-          <h2 className="card-title" style={{ marginBottom: 0 }}>
-            {clientes.length} cliente{clientes.length !== 1 ? 's' : ''}
-          </h2>
-          <button className="btn btn-primary" onClick={() => setMostrarForm(!mostrarForm)}>
-            {mostrarForm ? 'Cancelar' : '+ Novo cliente'}
-          </button>
+      {/* Cabeçalho da Página */}
+      <div className="page-header-container">
+        <div className="page-title-group">
+          <div className="page-eyebrow">Painel Mestre</div>
+          <h1 className="page-title">
+            <FiUsers style={{ marginRight: 8, verticalAlign: 'middle' }} />
+            Clientes
+          </h1>
+          <p className="page-subtitle">Empresas com licença ativa do Satisfy.</p>
         </div>
 
-        {mostrarForm && (
+        <button 
+          className="btn-action-primary" 
+          onClick={() => setMostrarForm(!mostrarForm)}
+        >
+          <FiPlus />
+          {mostrarForm ? 'CANCELAR' : 'NOVO CLIENTE'}
+        </button>
+      </div>
+
+      {/* Formulário Retrátil */}
+      {mostrarForm && (
+        <div className="panel-card form-card-box">
           <NovoClienteForm
             onCriado={() => {
               setMostrarForm(false)
               buscarClientes()
             }}
           />
-        )}
+        </div>
+      )}
+
+      {/* Barra de Filtro e Busca */}
+      <div className="table-controls">
+        <div className="filter-summary">
+          <strong>{clientesFiltrados.length}</strong> {clientesFiltrados.length === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}
+        </div>
+
+        <div className="search-box">
+          <FiSearch className="search-icon" />
+          <input
+            type="text"
+            placeholder="Buscar por nome ou plano..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="card">
+      {/* Card da Tabela de Clientes */}
+      <div className="panel-card table-wrapper">
         {carregando ? (
-          <p className="empty-state">Carregando…</p>
-        ) : clientes.length === 0 ? (
-          <p className="empty-state">Nenhum cliente cadastrado ainda. Clique em "Novo cliente" para começar.</p>
+          <div className="empty-state">
+            <p>Carregando clientes...</p>
+          </div>
+        ) : clientesFiltrados.length === 0 ? (
+          <div className="empty-state">
+            <p>Nenhum cliente encontrado.</p>
+          </div>
         ) : (
-          <table>
+          <table className="clean-table data-table">
             <thead>
               <tr>
-                <th>Nome</th>
-                <th>Plano</th>
-                <th>Status</th>
-                <th style={{ width: 160 }}>Ações</th>
+                <th>NOME</th>
+                <th>PLANO</th>
+                <th>STATUS</th>
+                <th style={{ textAlign: 'right', paddingRight: '20px' }}>AÇÕES</th>
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
-                <LinhaCliente key={c.id} cliente={c} onMudou={buscarClientes} onAbrir={() => navigate(`/clientes/${c.id}`)} />
+              {clientesFiltrados.map((c) => (
+                <LinhaCliente
+                  key={c.id}
+                  cliente={c}
+                  onMudou={buscarClientes}
+                  onAbrir={() => navigate(`/clientes/${c.id}`)}
+                />
               ))}
             </tbody>
           </table>
@@ -78,12 +124,13 @@ export default function Dashboard() {
 function LinhaCliente({ cliente, onMudou, onAbrir }) {
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState(cliente.nome)
-  const [plano, setPlano] = useState(cliente.plano)
-  const [status, setStatus] = useState(cliente.status)
+  const [plano, setPlano] = useState(cliente.plano || 'trial')
+  const [status, setStatus] = useState(cliente.status || 'ativo')
   const [salvando, setSalvando] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
 
-  async function salvar() {
+  async function salvar(e) {
+    e.stopPropagation()
     setSalvando(true)
     await supabase.from('clientes').update({ nome, plano, status }).eq('id', cliente.id)
     setSalvando(false)
@@ -91,9 +138,10 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
     onMudou()
   }
 
-  async function excluir() {
+  async function excluir(e) {
+    e.stopPropagation()
     const confirmado = window.confirm(
-      `Excluir "${cliente.nome}"? Isso apaga TODAS as unidades, totens, pesquisas e respostas desse cliente. Não pode ser desfeito.`
+      `Excluir "${cliente.nome}"? Isso apagará todas as unidades, totens e respostas associadas.`
     )
     if (!confirmado) return
     setExcluindo(true)
@@ -103,41 +151,69 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
 
   if (editando) {
     return (
-      <tr>
-        <td><input value={nome} onChange={(e) => setNome(e.target.value)} style={estilos.inputInline} autoFocus /></td>
+      <tr className="editing-row">
         <td>
-          <select value={plano} onChange={(e) => setPlano(e.target.value)} style={estilos.inputInline}>
+          <input
+            className="input-inline"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            autoFocus
+          />
+        </td>
+        <td>
+          <select
+            className="input-inline select-inline"
+            value={plano}
+            onChange={(e) => setPlano(e.target.value)}
+          >
             <option value="trial">Trial</option>
             <option value="basico">Básico</option>
             <option value="pro">Pro</option>
           </select>
         </td>
         <td>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} style={estilos.inputInline}>
+          <select
+            className="input-inline select-inline"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
             <option value="ativo">Ativo</option>
             <option value="suspenso">Suspenso</option>
             <option value="cancelado">Cancelado</option>
           </select>
         </td>
-        <td style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-primary" style={estilos.btnPequeno} onClick={salvar} disabled={salvando}>
-            {salvando ? 'Salvando…' : 'Salvar'}
+        <td className="actions-cell">
+          <button className="btn-sm btn-save" onClick={salvar} disabled={salvando}>
+            {salvando ? 'Salvando...' : 'Salvar'}
           </button>
-          <button className="btn-ghost" style={estilos.btnPequeno} onClick={() => setEditando(false)}>Cancelar</button>
+          <button className="btn-sm btn-cancel" onClick={() => setEditando(false)}>
+            Cancelar
+          </button>
         </td>
       </tr>
     )
   }
 
   return (
-    <tr className="clickable" onClick={onAbrir}>
-      <td>{cliente.nome}</td>
-      <td style={{ textTransform: 'capitalize' }}>{cliente.plano}</td>
-      <td><span className={`pill ${cliente.status}`}>{cliente.status}</span></td>
-      <td style={{ display: 'flex', gap: 8 }} onClick={(e) => e.stopPropagation()}>
-        <button className="btn-ghost" style={estilos.btnPequeno} onClick={() => setEditando(true)}>Editar</button>
-        <button className="btn-ghost" style={{ ...estilos.btnPequeno, color: 'var(--red)' }} onClick={excluir} disabled={excluindo}>
-          {excluindo ? 'Excluindo…' : 'Excluir'}
+    <tr className="data-row clickable" onClick={onAbrir}>
+      <td className="cell-primary">
+        <div className="client-name">{cliente.nome}</div>
+        <div className="client-sublink">
+          <FiExternalLink className="sublink-icon" /> Abrir painel
+        </div>
+      </td>
+      <td>
+        <span className="badge-plan">{cliente.plano || 'trial'}</span>
+      </td>
+      <td>
+        <span className={`pill ${cliente.status || 'ativo'}`}>{cliente.status || 'ativo'}</span>
+      </td>
+      <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
+        <button className="action-btn" title="Editar" onClick={() => setEditando(true)}>
+          <FiEdit2 />
+        </button>
+        <button className="action-btn delete" title="Excluir" onClick={excluir} disabled={excluindo}>
+          <FiTrash2 />
         </button>
       </td>
     </tr>
@@ -154,35 +230,53 @@ function NovoClienteForm({ onCriado }) {
     e.preventDefault()
     setEnviando(true)
     setErro(null)
-    const { error } = await supabase.from('clientes').insert({ nome, plano })
+    const { error } = await supabase.from('clientes').insert({ nome, plano, status: 'ativo' })
     setEnviando(false)
     if (error) setErro('Não foi possível criar o cliente.')
-    else onCriado()
+    else {
+      setNome('')
+      onCriado()
+    }
   }
 
   return (
-    <form onSubmit={salvar} style={{ marginTop: 20, borderTop: '1px solid var(--line)', paddingTop: 20 }}>
-      <div className="field">
-        <label htmlFor="nome">Nome do cliente</label>
-        <input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required autoFocus />
+    <form onSubmit={salvar} className="compact-form">
+      <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#1e293b' }}>Cadastrar Novo Cliente</h3>
+      <div className="form-grid">
+        <div className="form-field">
+          <label htmlFor="nome">Nome da Empresa</label>
+          <input
+            id="nome"
+            className="text-input"
+            value={nome}
+            placeholder="Ex: Locarti Soluções"
+            onChange={(e) => setNome(e.target.value)}
+            required
+            autoFocus
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="plano">Plano de Licença</label>
+          <select
+            id="plano"
+            className="text-input"
+            value={plano}
+            onChange={(e) => setPlano(e.target.value)}
+          >
+            <option value="trial">Trial</option>
+            <option value="basico">Básico</option>
+            <option value="pro">Pro</option>
+          </select>
+        </div>
       </div>
-      <div className="field">
-        <label htmlFor="plano">Plano</label>
-        <select id="plano" value={plano} onChange={(e) => setPlano(e.target.value)}>
-          <option value="trial">Trial</option>
-          <option value="basico">Básico</option>
-          <option value="pro">Pro</option>
-        </select>
-      </div>
+
       {erro && <div className="error-text">{erro}</div>}
-      <button className="btn btn-primary" type="submit" disabled={enviando}>
-        {enviando ? 'Salvando…' : 'Salvar cliente'}
-      </button>
+
+      <div className="form-footer">
+        <button className="btn-action-primary" type="submit" disabled={enviando}>
+          {enviando ? 'Salvando…' : 'Salvar Empresa'}
+        </button>
+      </div>
     </form>
   )
-}
-
-const estilos = {
-  inputInline: { width: '100%', padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 13 },
-  btnPequeno: { padding: '6px 12px', fontSize: 13 },
 }
