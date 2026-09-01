@@ -1,370 +1,493 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../supabaseClient'
+import { 
+  FiPlus, 
+  FiTrash2, 
+  FiArrowUp, 
+  FiArrowDown, 
+  FiImage, 
+  FiType, 
+  FiCheck, 
+  FiStar, 
+  FiSmile, 
+  FiSliders, 
+  FiList, 
+  FiSmartphone,
+  FiUploadCloud,
+  FiRefreshCw
+} from 'react-icons/fi'
 
-// Cada tipo define se tem "opções" (múltipla escolha/seleção), se tem
-// "imagem" (boas-vindas, imagem, encerramento) e se tem "escala" (escala de opinião)
-const TIPOS = [
-  { valor: 'boas_vindas', label: 'Boas-vindas', tag: 'Mensagem' },
-  { valor: 'imagem', label: 'Imagem', tag: 'Mensagem', temImagem: true },
-  { valor: 'escolha_unica', label: 'Múltipla-escolha (1 opção)', temOpcoes: true },
-  { valor: 'escolha_multipla', label: 'Múltipla-seleção (várias opções)', temOpcoes: true },
-  { valor: 'nps', label: 'NPS (0-10)' },
-  { valor: 'comentario', label: 'Comentário (texto longo)' },
-  { valor: 'texto_curto', label: 'Texto curto' },
-  { valor: 'data', label: 'Data' },
-  { valor: 'nota', label: 'Nota (0-10)' },
-  { valor: 'estrelas', label: 'Estrelas (1-5)' },
-  { valor: 'carinhas', label: 'Carinhas (1-5)' },
-  { valor: 'escala_opiniao', label: 'Escala de opinião (numérica)', temEscala: true },
-  { valor: 'encerramento', label: 'Encerramento', tag: 'Mensagem' },
+const TIPOS_PERGUNTA = [
+  { id: 'nps', label: 'NPS (0 a 10)', icon: <FiSliders /> },
+  { id: 'estrelas', label: 'Estrelas (1 a 5)', icon: <FiStar /> },
+  { id: 'carinhas', label: 'Carinhas / Emojis', icon: <FiSmile /> },
+  { id: 'nota', label: 'Comentário (Texto)', icon: <FiType /> },
+  { id: 'escolha_unica', label: 'Múltipla Escolha', icon: <FiList /> },
 ]
 
-function infoTipo(tipo) {
-  return TIPOS.find((t) => t.valor === tipo) || TIPOS[5]
-}
-
-function novaPergunta() {
-  return {
-    id: crypto.randomUUID().slice(0, 8),
-    tipo: 'comentario',
-    texto: '',
-    imagem_url: '',
-    opcoes: [],
-    escala_min: 1,
-    escala_max: 5,
-  }
-}
-
-// Editor completo: banner de abertura + lista de perguntas em ordem,
-// tudo salvo em `configuracoes` (banner) e `pesquisas.perguntas` (perguntas).
 export default function EditorPesquisa({ clienteId }) {
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
-  const [erro, setErro] = useState(null)
-  const [salvo, setSalvo] = useState(false)
-
-  const [configId, setConfigId] = useState(null)
-  const [bannerUrl, setBannerUrl] = useState('')
   const [enviandoImagem, setEnviandoImagem] = useState(false)
-  const [erroImagem, setErroImagem] = useState(null)
+  const [bannerUrl, setBannerUrl] = useState('')
   const [textoBotao, setTextoBotao] = useState('Toque para avaliar')
+  const [fraseAbertura, setFraseAbertura] = useState('Como foi sua experiência hoje?')
   const [corPrimaria, setCorPrimaria] = useState('#e8a33d')
-  const [textoBoasVindas, setTextoBoasVindas] = useState('Como foi sua experiência hoje?')
-
-  const [pesquisaId, setPesquisaId] = useState(null)
-  const [nomePesquisa, setNomePesquisa] = useState('Pesquisa padrão')
-  const [perguntas, setPerguntas] = useState([novaPergunta()])
+  const [nomePesquisa, setNomePesquisa] = useState('Pesquisa de Satisfação')
+  const [perguntas, setPerguntas] = useState([])
+  const [etapaPreview, setEtapaPreview] = useState(0)
+  
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
-    carregar()
+    buscarDados()
   }, [clienteId])
 
-  async function carregar() {
+  async function buscarDados() {
     setCarregando(true)
-
-    const { data: config } = await supabase
-      .from('configuracoes')
-      .select('*')
-      .eq('cliente_id', clienteId)
-      .is('unidade_id', null)
-      .maybeSingle()
-
-    if (config) {
-      setConfigId(config.id)
-      setBannerUrl(config.banner_url || '')
-      setTextoBotao(config.texto_botao_iniciar || 'Toque para avaliar')
-      setCorPrimaria(config.cor_primaria || '#e8a33d')
-      setTextoBoasVindas(config.texto_boas_vindas || 'Como foi sua experiência hoje?')
-    }
-
-    const { data: pesquisa } = await supabase
+    const { data } = await supabase
       .from('pesquisas')
       .select('*')
       .eq('cliente_id', clienteId)
       .eq('ativa', true)
       .maybeSingle()
 
-    if (pesquisa) {
-      setPesquisaId(pesquisa.id)
-      setNomePesquisa(pesquisa.nome)
-      setPerguntas(pesquisa.perguntas?.length ? pesquisa.perguntas.map(normalizarPergunta) : [novaPergunta()])
+    if (data) {
+      setNomePesquisa(data.nome || 'Pesquisa de Satisfação')
+      setBannerUrl(data.banner_url || '')
+      setTextoBotao(data.texto_botao || 'Toque para avaliar')
+      setFraseAbertura(data.frase_abertura || 'Como foi sua experiência hoje?')
+      setCorPrimaria(data.cor_primaria || '#e8a33d')
+      setPerguntas(data.perguntas || [])
     }
-
     setCarregando(false)
   }
 
-  function atualizarPergunta(id, campo, valor) {
-    setPerguntas((prev) => prev.map((p) => (p.id === id ? { ...p, [campo]: valor } : p)))
-  }
+  // Upload direto para o bucket do Supabase Storage
+  async function handleUploadBanner(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-  function atualizarOpcoesTexto(id, textoBruto) {
-    const opcoes = textoBruto.split('\n')
-    atualizarPergunta(id, 'opcoes', opcoes)
-  }
+    try {
+      setEnviandoImagem(true)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${clienteId}-${Date.now()}.${fileExt}`
+      const filePath = `banners/${fileName}`
 
-  function removerPergunta(id) {
-    setPerguntas((prev) => prev.filter((p) => p.id !== id))
-  }
+      // Envia para o bucket 'banners' (crie o bucket público no Supabase caso ainda não exista)
+      const { error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(filePath, file, { upsert: true })
 
-  function moverPergunta(indice, direcao) {
-    setPerguntas((prev) => {
-      const nova = [...prev]
-      const alvo = indice + direcao
-      if (alvo < 0 || alvo >= nova.length) return prev
-      ;[nova[indice], nova[alvo]] = [nova[alvo], nova[indice]]
-      return nova
-    })
-  }
+      if (uploadError) {
+        throw uploadError
+      }
 
-  async function enviarImagemBanner(arquivo) {
-    if (!arquivo) return
-    setErroImagem(null)
-    if (arquivo.size > 3 * 1024 * 1024) {
-      setErroImagem('Imagem muito grande — envie um arquivo de até 3MB.')
-      return
-    }
-    setEnviandoImagem(true)
-    const extensao = arquivo.name.split('.').pop()
-    const caminho = `${clienteId}/banner-${Date.now()}.${extensao}`
-    const { error } = await supabase.storage.from('banners').upload(caminho, arquivo, { upsert: true })
-    if (error) {
-      setErroImagem('Não foi possível enviar a imagem.')
+      // Obtém a URL pública gerada
+      const { data } = supabase.storage.from('banners').getPublicUrl(filePath)
+      setBannerUrl(data.publicUrl)
+    } catch (err) {
+      alert('Erro ao enviar imagem. Verifique se o bucket "banners" está criado no Supabase ou use o campo de URL abaixo.')
+      console.error(err)
+    } finally {
       setEnviandoImagem(false)
-      return
     }
-    const { data } = supabase.storage.from('banners').getPublicUrl(caminho)
-    setBannerUrl(data.publicUrl)
-    setEnviandoImagem(false)
   }
 
-  async function enviarImagemPergunta(id, arquivo) {
-    if (!arquivo) return
-    if (arquivo.size > 3 * 1024 * 1024) {
-      setErro('Imagem muito grande — envie um arquivo de até 3MB.')
-      return
+  const adicionarPergunta = () => {
+    const nova = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      texto: 'Qual é seu grau de satisfação?',
+      tipo: 'nps',
+      opcoes: ['Ótimo', 'Regular', 'Ruim'],
     }
-    const extensao = arquivo.name.split('.').pop()
-    const caminho = `${clienteId}/pergunta-${id}-${Date.now()}.${extensao}`
-    const { error } = await supabase.storage.from('banners').upload(caminho, arquivo, { upsert: true })
-    if (error) {
-      setErro('Não foi possível enviar a imagem da pergunta.')
-      return
-    }
-    const { data } = supabase.storage.from('banners').getPublicUrl(caminho)
-    atualizarPergunta(id, 'imagem_url', data.publicUrl)
+    setPerguntas([...perguntas, nova])
   }
 
-  async function salvar() {
+  const removerPergunta = (index) => {
+    setPerguntas(perguntas.filter((_, i) => i !== index))
+  }
+
+  const moverPergunta = (index, direcao) => {
+    const novoIndex = index + direcao
+    if (novoIndex < 0 || novoIndex >= perguntas.length) return
+    const lista = [...perguntas]
+    const item = lista.splice(index, 1)[0]
+    lista.splice(novoIndex, 0, item)
+    setPerguntas(lista)
+  }
+
+  const atualizarPergunta = (index, campo, valor) => {
+    const lista = [...perguntas]
+    lista[index] = { ...lista[index], [campo]: valor }
+    setPerguntas(lista)
+  }
+
+  async function salvarPesquisa(e) {
+    e?.preventDefault()
     setSalvando(true)
-    setErro(null)
-    setSalvo(false)
 
-    const payloadConfig = {
-      cliente_id: clienteId,
-      unidade_id: null,
-      banner_url: bannerUrl || null,
-      texto_botao_iniciar: textoBotao,
-      cor_primaria: corPrimaria,
-      texto_boas_vindas: textoBoasVindas,
-    }
-
-    const resultConfig = configId
-      ? await supabase.from('configuracoes').update(payloadConfig).eq('id', configId)
-      : await supabase.from('configuracoes').insert(payloadConfig).select().single()
-
-    if (resultConfig.error) {
-      setErro('Não foi possível salvar a configuração visual.')
-      setSalvando(false)
-      return
-    }
-    if (!configId && resultConfig.data) setConfigId(resultConfig.data.id)
-
-    const perguntasValidas = perguntas
-      .filter((p) => p.texto.trim() !== '')
-      .map((p) => ({ ...p, opcoes: (p.opcoes || []).map((o) => o.trim()).filter(Boolean) }))
-
-    const payloadPesquisa = {
+    const payload = {
       cliente_id: clienteId,
       nome: nomePesquisa,
-      perguntas: perguntasValidas,
+      banner_url: bannerUrl,
+      texto_botao: textoBotao,
+      frase_abertura: fraseAbertura,
+      cor_primaria: corPrimaria,
+      perguntas,
       ativa: true,
     }
 
-    const resultPesquisa = pesquisaId
-      ? await supabase.from('pesquisas').update(payloadPesquisa).eq('id', pesquisaId)
-      : await supabase.from('pesquisas').insert(payloadPesquisa).select().single()
+    const { data: existente } = await supabase
+      .from('pesquisas')
+      .select('id')
+      .eq('cliente_id', clienteId)
+      .eq('ativa', true)
+      .maybeSingle()
+
+    if (existente?.id) {
+      await supabase.from('pesquisas').update(payload).eq('id', existente.id)
+    } else {
+      await supabase.from('pesquisas').insert(payload)
+    }
 
     setSalvando(false)
-
-    if (resultPesquisa.error) {
-      setErro('Não foi possível salvar as perguntas.')
-      return
-    }
-    if (!pesquisaId && resultPesquisa.data) setPesquisaId(resultPesquisa.data.id)
-
-    setSalvo(true)
-    setTimeout(() => setSalvo(false), 2500)
+    alert('Pesquisa e banners salvos com sucesso!')
   }
 
-  if (carregando) return <p className="empty-state">Carregando…</p>
+  if (carregando) {
+    return <div className="empty-state"><p>Carregando editor...</p></div>
+  }
 
   return (
-    <div>
-      {/* Banner de abertura */}
-      <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Tela de abertura (banner)</h3>
-        <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 14 }}>
-          É a primeira coisa que aparece no totem. O visitante toca no banner (ou no botão) pra iniciar a pesquisa.
-        </p>
-        <div className="field">
-          <label htmlFor="bannerArquivo">Enviar imagem do banner</label>
-          <input id="bannerArquivo" type="file" accept="image/*" onChange={(e) => enviarImagemBanner(e.target.files?.[0])} disabled={enviandoImagem} />
-          {enviandoImagem && <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 6 }}>Enviando…</div>}
-          {erroImagem && <div className="error-text">{erroImagem}</div>}
-        </div>
-        <div className="field">
-          <label htmlFor="bannerUrl">Ou cole a URL de uma imagem já hospedada</label>
-          <input id="bannerUrl" value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://…" />
-        </div>
-        <div className="field">
-          <label htmlFor="textoBotao">Texto do botão</label>
-          <input id="textoBotao" value={textoBotao} onChange={(e) => setTextoBotao(e.target.value)} />
-        </div>
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <div className="field" style={{ flex: '1 1 140px' }}>
-            <label htmlFor="corPrimaria">Cor principal</label>
-            <input id="corPrimaria" type="color" value={corPrimaria} onChange={(e) => setCorPrimaria(e.target.value)} style={{ height: 40, padding: 4 }} />
+    <div className="survey-editor-layout">
+      {/* Coluna 1: Formulário e Configurações */}
+      <div className="editor-controls-col">
+        {/* Seção Identidade & Banner */}
+        <div className="editor-section-card">
+          <div className="section-card-header">
+            <h3 className="section-card-title">
+              <FiImage style={{ marginRight: 8 }} /> Identidade & Tela Inicial
+            </h3>
           </div>
-          <div className="field" style={{ flex: '2 1 220px' }}>
-            <label htmlFor="boasVindas">Frase da tela de nota (padrão)</label>
-            <input id="boasVindas" value={textoBoasVindas} onChange={(e) => setTextoBoasVindas(e.target.value)} />
-          </div>
-        </div>
-        {bannerUrl && (
-          <div style={{ marginTop: 8 }}>
-            <img src={bannerUrl} alt="Pré-visualização do banner" style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 8, border: '1px solid var(--line)' }} />
-          </div>
-        )}
-      </div>
 
-      {/* Perguntas */}
-      <div>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Perguntas da pesquisa</h3>
-        <p style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 14 }}>
-          Cada pergunta aparece em uma tela, na ordem abaixo. Escolha o formato de cada uma.
-        </p>
-
-        <div className="field">
-          <label htmlFor="nomePesquisa">Nome da pesquisa (interno, só pra organização)</label>
-          <input id="nomePesquisa" value={nomePesquisa} onChange={(e) => setNomePesquisa(e.target.value)} />
-        </div>
-
-        {perguntas.map((p, indice) => {
-          const info = infoTipo(p.tipo)
-          return (
-            <div key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14, borderBottom: '1px solid var(--line)', paddingBottom: 14, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', flexDirection: 'row', gap: 6, paddingTop: 0 }}>
-                <button className="btn-ghost" style={{ padding: '2px 8px' }} onClick={() => moverPergunta(indice, -1)} disabled={indice === 0} type="button">↑</button>
-                <button className="btn-ghost" style={{ padding: '2px 8px' }} onClick={() => moverPergunta(indice, 1)} disabled={indice === perguntas.length - 1} type="button">↓</button>
-              </div>
-
-              <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                <input
-                  value={p.texto}
-                  onChange={(e) => atualizarPergunta(p.id, 'texto', e.target.value)}
-                  placeholder={
-                    info.tag === 'Mensagem'
-                      ? `Texto da tela ${indice + 1}, ex: "Obrigado pela visita!"`
-                      : `Pergunta ${indice + 1}, ex: "Como foi o atendimento?"`
-                  }
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 14, marginBottom: 8 }}
-                />
-
-                <select
-                  value={p.tipo}
-                  onChange={(e) => atualizarPergunta(p.id, 'tipo', e.target.value)}
-                  style={{ padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13, marginBottom: 8 }}
-                >
-                  {TIPOS.map((t) => (
-                    <option key={t.valor} value={t.valor}>{t.label}</option>
-                  ))}
-                </select>
-
-                {info.temImagem && (
-                  <div style={{ marginTop: 6 }}>
-                    <input type="file" accept="image/*" onChange={(e) => enviarImagemPergunta(p.id, e.target.files?.[0])} style={{ fontSize: 13 }} />
-                    {p.imagem_url && (
-                      <img src={p.imagem_url} alt="" style={{ display: 'block', marginTop: 8, maxHeight: 100, borderRadius: 6, border: '1px solid var(--line)' }} />
-                    )}
-                  </div>
-                )}
-
-                {info.temOpcoes && (
-                  <div style={{ marginTop: 6 }}>
-                    <label style={{ fontSize: 12, color: 'var(--ink-soft)', display: 'block', marginBottom: 4 }}>
-                      Uma opção por linha
-                    </label>
-                    <textarea
-                      value={(p.opcoes || []).join('\n')}
-                      onChange={(e) => atualizarOpcoesTexto(p.id, e.target.value)}
-                      rows={3}
-                      placeholder={'Ótimo\nBom\nRegular\nRuim'}
-                      style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }}
-                    />
-                  </div>
-                )}
-
-                {info.temEscala && (
-                  <div style={{ display: 'flex', gap: 12, marginTop: 6, alignItems: 'center' }}>
-                    <label style={{ fontSize: 12, color: 'var(--ink-soft)' }}>De</label>
-                    <input
-                      type="number"
-                      value={p.escala_min}
-                      onChange={(e) => atualizarPergunta(p.id, 'escala_min', Number(e.target.value))}
-                      style={{ width: 60, padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13 }}
-                    />
-                    <label style={{ fontSize: 12, color: 'var(--ink-soft)' }}>até</label>
-                    <input
-                      type="number"
-                      value={p.escala_max}
-                      onChange={(e) => atualizarPergunta(p.id, 'escala_max', Number(e.target.value))}
-                      style={{ width: 60, padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13 }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <button className="btn-ghost" onClick={() => removerPergunta(p.id)} type="button" style={{ marginTop: 8 }}>
-                Remover
-              </button>
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: 14 }}>
+            <div className="form-field">
+              <label>Nome Interno da Pesquisa</label>
+              <input
+                className="text-input"
+                value={nomePesquisa}
+                onChange={(e) => setNomePesquisa(e.target.value)}
+                placeholder="Ex: Pesquisa de Satisfação Geral"
+              />
             </div>
-          )
-        })}
 
-        <button className="btn-ghost" type="button" onClick={() => setPerguntas((prev) => [...prev, novaPergunta()])}>
-          + Adicionar pergunta
-        </button>
+            {/* Upload de Imagem com Dropzone */}
+            <div className="form-field">
+              <label>Imagem do Banner</label>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleUploadBanner} 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+              />
+              
+              <div 
+                className="banner-upload-dropzone" 
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {enviandoImagem ? (
+                  <div className="upload-loading">
+                    <FiRefreshCw className="spin-icon" />
+                    <span>Fazendo upload da imagem...</span>
+                  </div>
+                ) : (
+                  <div className="upload-content">
+                    <FiUploadCloud className="upload-icon" />
+                    <div className="upload-text-group">
+                      <strong>Clique para escolher uma imagem</strong>
+                      <span>PNG, JPG ou WEBP recomendados (resolução padrão de totem)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <span style={{ fontSize: 11, color: '#94a3b8', display: 'block', marginBottom: 4 }}>
+                  Ou informe a URL direta da imagem:
+                </span>
+                <input
+                  className="text-input"
+                  value={bannerUrl}
+                  onChange={(e) => setBannerUrl(e.target.value)}
+                  placeholder="https://exemplo.com/banner.png"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: 14 }}>
+            <div className="form-field">
+              <label>Texto do Botão Iniciar</label>
+              <input
+                className="text-input"
+                value={textoBotao}
+                onChange={(e) => setTextoBotao(e.target.value)}
+              />
+            </div>
+
+            <div className="form-field">
+              <label>Cor Principal de Destaque</label>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={corPrimaria}
+                  onChange={(e) => setCorPrimaria(e.target.value)}
+                  style={{
+                    width: 44,
+                    height: 40,
+                    padding: 0,
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    cursor: 'pointer'
+                  }}
+                />
+                <input
+                  className="text-input"
+                  value={corPrimaria}
+                  onChange={(e) => setCorPrimaria(e.target.value)}
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="form-field" style={{ marginTop: 14 }}>
+            <label>Frase da Tela Inicial (abaixo do banner)</label>
+            <input
+              className="text-input"
+              value={fraseAbertura}
+              onChange={(e) => setFraseAbertura(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Seção Construtor de Perguntas */}
+        <div className="editor-section-card">
+          <div className="section-card-header">
+            <h3 className="section-card-title">
+              <FiType style={{ marginRight: 8 }} /> Perguntas ({perguntas.length})
+            </h3>
+            <button className="btn-action-primary" type="button" onClick={adicionarPergunta}>
+              <FiPlus /> Adicionar Pergunta
+            </button>
+          </div>
+
+          {perguntas.length === 0 ? (
+            <div className="empty-state">
+              <p>Nenhuma pergunta adicionada. Clique no botão acima para criar a primeira.</p>
+            </div>
+          ) : (
+            <div className="questions-editor-list">
+              {perguntas.map((p, idx) => (
+                <div key={p.id || idx} className="question-item-card">
+                  <div className="question-card-topbar">
+                    <div className="question-order-badges">
+                      <span className="question-index-tag">#{idx + 1}</span>
+                      <button
+                        className="order-btn"
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => moverPergunta(idx, -1)}
+                      >
+                        <FiArrowUp />
+                      </button>
+                      <button
+                        className="order-btn"
+                        type="button"
+                        disabled={idx === perguntas.length - 1}
+                        onClick={() => moverPergunta(idx, 1)}
+                      >
+                        <FiArrowDown />
+                      </button>
+                    </div>
+
+                    <button
+                      className="action-btn delete"
+                      type="button"
+                      title="Excluir pergunta"
+                      onClick={() => removerPergunta(idx)}
+                    >
+                      <FiTrash2 />
+                    </button>
+                  </div>
+
+                  <div className="form-field" style={{ marginBottom: 12 }}>
+                    <input
+                      className="text-input"
+                      value={p.texto}
+                      placeholder="Digite o enunciado da pergunta..."
+                      onChange={(e) => atualizarPergunta(idx, 'texto', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-field">
+                    <label style={{ fontSize: 11, marginBottom: 6, color: '#64748b' }}>Tipo de Resposta</label>
+                    <div className="type-selector-pill-row">
+                      {TIPOS_PERGUNTA.map((tp) => (
+                        <button
+                          key={tp.id}
+                          type="button"
+                          className={`type-pill-btn ${p.tipo === tp.id ? 'active' : ''}`}
+                          onClick={() => atualizarPergunta(idx, 'tipo', tp.id)}
+                        >
+                          {tp.icon}
+                          <span>{tp.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {p.tipo === 'escolha_unica' && (
+                    <div className="form-field" style={{ marginTop: 12 }}>
+                      <label style={{ fontSize: 11, color: '#64748b' }}>Opções (uma por linha)</label>
+                      <textarea
+                        className="text-input"
+                        rows={3}
+                        value={Array.isArray(p.opcoes) ? p.opcoes.join('\n') : (p.opcoes || '')}
+                        onChange={(e) =>
+                          atualizarPergunta(
+                            idx,
+                            'opcoes',
+                            e.target.value.split('\n').filter((l) => l.trim().length > 0)
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Botão de Ação Salvar */}
+        <div style={{ marginTop: 10 }}>
+          <button
+            className="btn-action-primary"
+            style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: 14 }}
+            onClick={salvarPesquisa}
+            disabled={salvando}
+          >
+            <FiCheck /> {salvando ? 'Salvando alterações...' : 'Salvar Todas as Configurações'}
+          </button>
+        </div>
       </div>
 
-      {erro && <div className="error-text">{erro}</div>}
-      {salvo && <div style={{ color: 'var(--teal)', fontSize: 13, marginTop: 12 }}>Salvo com sucesso.</div>}
+      {/* Coluna 2: Live Preview */}
+      <div className="live-preview-sticky">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FiSmartphone /> Live Preview
+          </span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              className={`preview-tab-pill ${etapaPreview === 0 ? 'active' : ''}`}
+              onClick={() => setEtapaPreview(0)}
+            >
+              Capa
+            </button>
+            {perguntas.map((_, i) => (
+              <button
+                key={i}
+                className={`preview-tab-pill ${etapaPreview === i + 1 ? 'active' : ''}`}
+                onClick={() => setEtapaPreview(i + 1)}
+              >
+                P{i + 1}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <button className="btn btn-primary" onClick={salvar} disabled={salvando} style={{ marginTop: 20 }}>
-        {salvando ? 'Salvando…' : 'Salvar pesquisa'}
-      </button>
+        <div className="tablet-frame">
+          <div className="tablet-screen">
+            {etapaPreview === 0 ? (
+              <>
+                {bannerUrl ? (
+                  <img src={bannerUrl} alt="Banner Preview" className="preview-banner-img" />
+                ) : (
+                  <div className="preview-banner-placeholder">
+                    <FiImage style={{ fontSize: 32, color: '#94a3b8', marginBottom: 6 }} />
+                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Banner da Pesquisa</span>
+                  </div>
+                )}
+                <h4 style={{ margin: '14px 0 20px 0', fontSize: 14, color: '#1e293b' }}>
+                  {fraseAbertura}
+                </h4>
+                <button
+                  className="preview-start-btn"
+                  style={{ backgroundColor: corPrimaria }}
+                  onClick={() => perguntas.length > 0 && setEtapaPreview(1)}
+                >
+                  {textoBotao}
+                </button>
+              </>
+            ) : (
+              <div className="preview-question-content" style={{ width: '100%' }}>
+                <span className="preview-tag">Pergunta {etapaPreview} de {perguntas.length}</span>
+                <h4 style={{ margin: '12px 0 20px 0', fontSize: 14, color: '#0f172a' }}>
+                  {perguntas[etapaPreview - 1]?.texto}
+                </h4>
+
+                {perguntas[etapaPreview - 1]?.tipo === 'nps' && (
+                  <div className="preview-nps-row">
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <span key={n} className="nps-ball">{n}</span>
+                    ))}
+                  </div>
+                )}
+
+                {perguntas[etapaPreview - 1]?.tipo === 'estrelas' && (
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', fontSize: 24, color: '#eab308' }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <FiStar key={s} />
+                    ))}
+                  </div>
+                )}
+
+                {perguntas[etapaPreview - 1]?.tipo === 'carinhas' && (
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'center', fontSize: 26 }}>
+                    <span>😡</span>
+                    <span>🙁</span>
+                    <span>😐</span>
+                    <span>🙂</span>
+                    <span>😍</span>
+                  </div>
+                )}
+
+                {perguntas[etapaPreview - 1]?.tipo === 'nota' && (
+                  <textarea
+                    placeholder="Digite sua resposta..."
+                    disabled
+                    style={{ width: '100%', height: 60, borderRadius: 8, border: '1px solid #e2e8f0', padding: 8, fontSize: 11 }}
+                  />
+                )}
+
+                {perguntas[etapaPreview - 1]?.tipo === 'escolha_unica' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+                    {(perguntas[etapaPreview - 1]?.opcoes || []).map((op, i) => (
+                      <div key={i} className="preview-option-chip">
+                        {op}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
-}
-
-// garante que perguntas antigas (salvas antes dessa versão) tenham todos os campos
-function normalizarPergunta(p) {
-  return {
-    id: p.id,
-    tipo: p.tipo === 'texto' ? 'comentario' : p.tipo, // compatibilidade com o tipo antigo
-    texto: p.texto || '',
-    imagem_url: p.imagem_url || '',
-    opcoes: p.opcoes || [],
-    escala_min: p.escala_min ?? 1,
-    escala_max: p.escala_max ?? 5,
-  }
 }
