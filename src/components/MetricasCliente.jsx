@@ -1,15 +1,24 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { 
+  FiMessageSquare, 
+  FiHome, 
+  FiStar, 
+  FiDownload, 
+  FiPrinter, 
+  FiUser 
+} from 'react-icons/fi'
 
 const PERIODOS = [
   { valor: '7', label: 'Últimos 7 dias', dias: 7 },
-  { valor: '30', label: 'Últimos 30 dias', dias: 30 },
+  { valor: '30', label: 'Últimos 30 Dias', dias: 30 },
   { valor: '90', label: 'Últimos 90 dias', dias: 90 },
   { valor: 'todos', label: 'Desde o início', dias: null },
 ]
 
 const TIPOS_NOTA = ['estrelas', 'carinhas', 'nps', 'nota', 'escala_opiniao']
 const TIPOS_ESCOLHA = ['escolha_unica', 'escolha_multipla']
+const MAX_POR_TIPO = { estrelas: 5, carinhas: 5, nps: 10, nota: 10, escala_opiniao: 10 }
 
 export default function MetricasCliente({ clienteId }) {
   const [carregando, setCarregando] = useState(true)
@@ -32,7 +41,7 @@ export default function MetricasCliente({ clienteId }) {
       .order('created_at', { ascending: false })
       .limit(1000)
 
-    if (config.dias) {
+    if (config?.dias) {
       const dataInicio = new Date()
       dataInicio.setDate(dataInicio.getDate() - config.dias)
       query = query.gte('created_at', dataInicio.toISOString())
@@ -49,8 +58,8 @@ export default function MetricasCliente({ clienteId }) {
   }
 
   const config = PERIODOS.find((p) => p.valor === periodo)
-  const agruparPorSemana = config.dias === null || config.dias > 30
-  const baldes = calcularVolume(respostas, config.dias || 90, agruparPorSemana)
+  const agruparPorSemana = config?.dias === null || config?.dias > 30
+  const baldes = calcularVolumeEEvolucao(respostas, config?.dias || 30, agruparPorSemana)
   const maiorVolume = Math.max(...baldes.map((b) => b.quantidade), 1)
 
   const total = respostas.length
@@ -62,156 +71,338 @@ export default function MetricasCliente({ clienteId }) {
   const porPergunta = calcularPorPergunta(respostas, perguntas)
 
   return (
-    <div>
-      <div style={estilos.filtroRow}>
-        <label htmlFor="periodo" style={estilos.filtroLabel}>Período</label>
-        <select id="periodo" value={periodo} onChange={(e) => setPeriodo(e.target.value)} style={estilos.filtroSelect}>
-          {PERIODOS.map((p) => (
-            <option key={p.valor} value={p.valor}>{p.label}</option>
-          ))}
-        </select>
+    <div className="metrics-dashboard-wrapper">
+      {/* Header com Filtro de Período e Botões de Exportação */}
+      <div className="metrics-header-toolbar metricas-ocultar-impressao">
+        <div className="period-selector-box">
+          <label htmlFor="periodo-select">Período</label>
+          <div className="select-styled-wrap">
+            <select
+              id="periodo-select"
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
+            >
+              {PERIODOS.map((p) => (
+                <option key={p.valor} value={p.valor}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {respostas.length > 0 && (
-          <button className="btn-ghost" style={{ marginLeft: 'auto', padding: '8px 14px', fontSize: 13 }} onClick={() => exportarCSV(respostas)}>
-            ⭳ Exportar CSV
-          </button>
+          <div className="export-actions" style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-export-csv" onClick={() => exportarCSV(respostas)}>
+              <FiDownload /> Exportar CSV
+            </button>
+            <button className="btn-export-csv" onClick={() => window.print()}>
+              <FiPrinter /> Exportar PDF
+            </button>
+          </div>
         )}
       </div>
 
       {carregando ? (
-        <p className="empty-state">Carregando…</p>
+        <div className="metrics-empty-state">
+          <div className="metrics-spinner"></div>
+          <p>Calculando métricas em tempo real...</p>
+        </div>
       ) : respostas.length === 0 ? (
-        <p className="empty-state">Nenhuma resposta registrada nesse período.</p>
+        <div className="metrics-empty-state">
+          <p>Nenhuma resposta registrada nesse período selecionado.</p>
+        </div>
       ) : (
-        <>
-          <div style={estilos.statsRow}>
-            <Stat label="Respostas no período" valor={total} />
-            <Stat label="Nota média" valor={media !== null ? media.toFixed(1) : '—'} />
-            <Stat label="Unidades ativas" valor={porUnidade.length} />
-          </div>
+        <div id="metricas-imprimir" className="metrics-content-fade">
+          {/* Top KPI Cards */}
+          <div className="kpi-grid">
+            <div className="kpi-card kpi-card-blue">
+              <div className="kpi-body">
+                <span className="kpi-number">{total}</span>
+                <span className="kpi-label">Total de Respostas</span>
+              </div>
+              <div className="kpi-icon-bubble">
+                <FiMessageSquare />
+              </div>
+            </div>
 
-          <div style={{ marginTop: 24 }}>
-            <h3 style={estilos.subtitulo}>Volume {agruparPorSemana ? 'por semana' : 'por dia'}</h3>
-            <div style={estilos.barrasWrap}>
-              {baldes.map((b) => (
-                <div key={b.chave} style={estilos.barraCol}>
-                  <div style={{ ...estilos.barra, height: `${(b.quantidade / maiorVolume) * 80 + 4}px` }} title={`${b.quantidade} resposta(s)`} />
-                  <span style={estilos.barraLabel}>{b.label}</span>
+            <div className="kpi-card kpi-card-amber">
+              <div className="kpi-body">
+                <div className="kpi-number-group">
+                  <span className="kpi-number">{media !== null ? media.toFixed(1) : '—'}</span>
+                  <FiStar className="star-icon" />
                 </div>
-              ))}
+                <span className="kpi-label">Nota Média</span>
+              </div>
+              <div className="kpi-gauge-wrap">
+                <SpeedometerGauge value={media || 0} max={10} size={70} />
+              </div>
+            </div>
+
+            <div className="kpi-card kpi-card-teal">
+              <div className="kpi-body">
+                <span className="kpi-number">{porUnidade.length || 1}</span>
+                <span className="kpi-label">Unidades Ativas</span>
+              </div>
+              <div className="kpi-icon-bubble">
+                <FiHome />
+              </div>
             </div>
           </div>
 
-          {porUnidade.length > 1 && (
-            <div style={{ marginTop: 28 }}>
-              <h3 style={estilos.subtitulo}>Comparação por unidade</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Unidade</th>
-                    <th>Respostas</th>
-                    <th>Nota média</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {porUnidade.map((u) => (
-                    <tr key={u.nome}>
-                      <td>{u.nome}</td>
-                      <td>{u.total}</td>
-                      <td>{u.media !== null ? u.media.toFixed(1) : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Gráficos Lado a Lado: Volume e Evolução */}
+          <div className="charts-double-row">
+            <div className="chart-box">
+              <h4 className="chart-title">
+                VOLUME DE RESPOSTAS por Dia (Últimos {config?.dias || 30} Dias)
+              </h4>
+              <div className="bar-chart-container">
+                {baldes.map((b, idx) => {
+                  const alturaPct = (b.quantidade / maiorVolume) * 85
+                  return (
+                    <div key={idx} className="bar-column">
+                      <div className="bar-track">
+                        <div
+                          className="bar-fill"
+                          style={{ height: `${Math.max(alturaPct, 6)}%` }}
+                          title={`${b.label}: ${b.quantidade} resposta(s)`}
+                        />
+                      </div>
+                      <span className="bar-tick">{b.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          )}
 
+            <div className="chart-box">
+              <h4 className="chart-title">EVOLUÇÃO da Nota MÉDIA</h4>
+              <div className="line-chart-container">
+                <TrendSparkline baldes={baldes} />
+                <div className="chart-axis-labels">
+                  {baldes.map((b, idx) => (
+                    <span key={idx} className="bar-tick">{b.label}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detalhamento por Pergunta */}
           {porPergunta.length > 0 && (
-            <div style={{ marginTop: 28 }}>
-              <h3 style={estilos.subtitulo}>Detalhamento por pergunta</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {porPergunta.map((p) => (
-                  <PerguntaDetalhe key={p.id} pergunta={p} />
+            <div className="questions-section">
+              <h4 className="section-title">DETALHAMENTO POR PERGUNTA</h4>
+              <div className="questions-grid">
+                {porPergunta.map((p, idx) => (
+                  <PerguntaVisualCard key={p.id || idx} pergunta={p} />
                 ))}
               </div>
             </div>
           )}
 
-          <div style={{ marginTop: 28 }}>
-            <h3 style={estilos.subtitulo}>Respostas recentes</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Quando</th>
-                  <th>Unidade</th>
-                  <th>Nota</th>
-                  <th>Comentário</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentes.map((r) => (
-                  <tr key={r.id}>
-                    <td style={{ whiteSpace: 'nowrap' }}>{formatarData(r.created_at)}</td>
-                    <td>{r.totens?.unidades?.nome || '—'}</td>
-                    <td>{r.nota ?? '—'}</td>
-                    <td style={{ maxWidth: 280 }}>{r.comentario || <span style={{ color: 'var(--ink-soft)' }}>—</span>}</td>
+          {/* Tabela de Respostas Recentes */}
+          <div className="recent-section">
+            <h4 className="section-title">RESPOSTAS RECENTES</h4>
+            <div className="table-styled-container">
+              <table className="clean-table">
+                <thead>
+                  <tr>
+                    <th>QUANDO</th>
+                    <th>UNIDADE</th>
+                    <th>SCORE</th>
+                    <th>COMMENTARY</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentes.map((r) => (
+                    <tr key={r.id}>
+                      <td className="cell-date">{formatarData(r.created_at)}</td>
+                      <td className="cell-unit">
+                        <div className="avatar-chip">
+                          <FiUser className="avatar-icon" />
+                        </div>
+                        <span>{r.totens?.unidades?.nome || 'Locarti'}</span>
+                      </td>
+                      <td>
+                        <ScoreIndicator score={r.nota} />
+                      </td>
+                      <td className="cell-comment">
+                        {r.comentario ? (
+                          <div className="comment-content">
+                            <span>{r.comentario}</span>
+                            <FiMessageSquare className="comment-bubble-icon" />
+                          </div>
+                        ) : (
+                          <span className="no-comment">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   )
 }
 
-function Stat({ label, valor }) {
+/* ========================================================
+   COMPONENTES VISUAIS AUXILIARES
+   ======================================================== */
+
+function SpeedometerGauge({ value = 0, max = 10, size = 68 }) {
+  const safeVal = Number(value) || 0
+  const ratio = Math.max(0, Math.min(safeVal / max, 1))
+  const rotationDeg = -90 + (ratio * 180)
+
   return (
-    <div style={estilos.statBox}>
-      <div style={estilos.statValor}>{valor}</div>
-      <div style={estilos.statLabel}>{label}</div>
+    <div className="speedometer-wrapper" style={{ width: size, height: size * 0.65 }}>
+      <svg viewBox="0 0 100 58" className="gauge-svg">
+        <defs>
+          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="45%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M 12 50 A 38 38 0 0 1 88 50"
+          fill="none"
+          stroke="#f1f5f9"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 12 50 A 38 38 0 0 1 88 50"
+          fill="none"
+          stroke="url(#gaugeGradient)"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+        <g transform={`translate(50, 50) rotate(${rotationDeg})`}>
+          <line x1="0" y1="0" x2="0" y2="-32" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="0" cy="0" r="4.5" fill="#334155" />
+          <circle cx="0" cy="0" r="2" fill="#ffffff" />
+        </g>
+      </svg>
     </div>
   )
 }
 
-function PerguntaDetalhe({ pergunta }) {
+function TrendSparkline({ baldes = [] }) {
+  if (!baldes.length) return null
+
+  const max = 10
+  const width = 450
+  const height = 90
+  const paddingX = 15
+  const paddingY = 15
+
+  const pontuacao = baldes.map((b, idx) => ({
+    x: paddingX + (idx / Math.max(baldes.length - 1, 1)) * (width - paddingX * 2),
+    y: height - paddingY - ((Math.min(b.media ?? 5, max) / max) * (height - paddingY * 2)),
+    val: b.media,
+  }))
+
+  const pontosPath = pontuacao.map((p) => `${p.x},${p.y}`).join(' L ')
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="trend-line-svg" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="1">
+          <stop offset="0%" stopColor="#d97706" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#d97706" stopOpacity="0.0" />
+        </linearGradient>
+      </defs>
+      {pontuacao.length > 0 && (
+        <path
+          d={`M ${pontuacao[0].x},${height - 4} L ${pontosPath} L ${pontuacao[pontuacao.length - 1].x},${height - 4} Z`}
+          fill="url(#areaGradient)"
+        />
+      )}
+      <path
+        d={`M ${pontosPath}`}
+        fill="none"
+        stroke="#c8933b"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {pontuacao.map((p, i) => (
+        <circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r="3"
+          fill="#ffffff"
+          stroke="#b47823"
+          strokeWidth="2"
+        />
+      ))}
+    </svg>
+  )
+}
+
+function PerguntaVisualCard({ pergunta }) {
   if (pergunta.modo === 'media') {
     return (
-      <div>
-        <div style={estilos.perguntaTitulo}>{pergunta.texto}</div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={estilos.perguntaMedia}>{pergunta.media.toFixed(1)}</span>
-          <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>média · {pergunta.total} resposta(s)</span>
+      <div className="question-metric-card">
+        <div className="question-info">
+          <span className="question-title">{pergunta.texto}</span>
+          <div className="question-score-row">
+            <span className="question-score-val">{pergunta.media.toFixed(1)}</span>
+            <span className="question-subtext">média · {pergunta.total} resposta(s)</span>
+          </div>
+        </div>
+        <div className="question-visual">
+          <SpeedometerGauge value={pergunta.media} max={MAX_POR_TIPO[pergunta.tipo] || 10} size={72} />
         </div>
       </div>
     )
   }
 
-  // modo === 'distribuicao' (múltipla escolha/seleção)
-  const maiorContagem = Math.max(...pergunta.opcoes.map((o) => o.quantidade), 1)
+  const maiorContagem = Math.max(...(pergunta.opcoes || []).map((o) => o.quantidade), 1)
   return (
-    <div>
-      <div style={estilos.perguntaTitulo}>{pergunta.texto}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {pergunta.opcoes.map((o) => (
-          <div key={o.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 13, width: 140, flexShrink: 0, color: 'var(--ink-soft)' }}>{o.label}</span>
-            <div style={{ flex: 1, background: 'var(--paper)', borderRadius: 4, overflow: 'hidden', height: 16 }}>
-              <div style={{ width: `${(o.quantidade / maiorContagem) * 100}%`, background: 'var(--amber)', height: '100%' }} />
+    <div className="question-metric-card full-span">
+      <div className="question-info" style={{ width: '100%' }}>
+        <span className="question-title">{pergunta.texto}</span>
+        <div className="distribution-list">
+          {(pergunta.opcoes || []).map((o) => (
+            <div key={o.label} className="distribution-item">
+              <span className="distribution-label">{o.label}</span>
+              <div className="distribution-track">
+                <div
+                  className="distribution-bar"
+                  style={{ width: `${(o.quantidade / maiorContagem) * 100}%` }}
+                />
+              </div>
+              <span className="distribution-count">{o.quantidade}</span>
             </div>
-            <span style={{ fontSize: 12, color: 'var(--ink-soft)', width: 24, textAlign: 'right' }}>{o.quantidade}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
+function ScoreIndicator({ score }) {
+  if (score === null || score === undefined) return <span className="no-score">—</span>
+  
+  let scoreClass = 'score-red'
+  if (score >= 8) scoreClass = 'score-green'
+  else if (score >= 5) scoreClass = 'score-amber'
+
+  return <span className={`score-badge ${scoreClass}`}>{score}</span>
+}
+
+/* ========================================================
+   FUNÇÕES AUXILIARES DE CÁLCULO E FORMATAÇÃO
+   ======================================================== */
+
 function calcularPorUnidade(respostas) {
   const mapa = new Map()
   respostas.forEach((r) => {
-    const nome = r.totens?.unidades?.nome || 'Sem unidade'
+    const nome = r.totens?.unidades?.nome || 'Locarti'
     if (!mapa.has(nome)) mapa.set(nome, { nome, total: 0, somaNotas: 0, comNota: 0 })
     const entrada = mapa.get(nome)
     entrada.total += 1
@@ -221,14 +412,10 @@ function calcularPorUnidade(respostas) {
     }
   })
   return Array.from(mapa.values())
-    .map((e) => ({ nome: e.nome, total: e.total, media: e.comNota ? e.somaNotas / e.comNota : null }))
-    .sort((a, b) => b.total - a.total)
 }
 
-// Junta as respostas detalhadas (jsonb) de todas as respostas, agrupando por pergunta
 function calcularPorPergunta(respostas, perguntas) {
   const porId = new Map()
-
   respostas.forEach((r) => {
     (r.respostas_detalhe || []).forEach((item) => {
       if (!porId.has(item.pergunta_id)) porId.set(item.pergunta_id, [])
@@ -246,10 +433,9 @@ function calcularPorPergunta(respostas, perguntas) {
         const validos = itens.filter((i) => typeof i.resposta === 'number')
         if (validos.length === 0) return null
         const soma = validos.reduce((acc, i) => acc + i.resposta, 0)
-        return { id: p.id, texto: p.texto, modo: 'media', media: soma / validos.length, total: validos.length }
+        return { id: p.id, texto: p.texto, tipo: p.tipo, modo: 'media', media: soma / validos.length, total: validos.length }
       }
 
-      // escolha_unica / escolha_multipla
       const contagem = new Map()
       itens.forEach((i) => {
         const respostasItem = Array.isArray(i.resposta) ? i.resposta : [i.resposta]
@@ -268,115 +454,66 @@ function calcularPorPergunta(respostas, perguntas) {
     .filter(Boolean)
 }
 
+function calcularVolumeEEvolucao(respostas, diasJanela) {
+  const hoje = new Date()
+  const baldes = []
+  const DIAS_EXIBIR = Math.min(diasJanela || 30, 18)
+
+  for (let i = DIAS_EXIBIR - 1; i >= 0; i--) {
+    const data = new Date(hoje)
+    data.setDate(hoje.getDate() - i)
+    baldes.push({
+      chave: data.toISOString().slice(0, 10),
+      label: data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+      quantidade: 0,
+      somaNotas: 0,
+      comNota: 0,
+    })
+  }
+
+  respostas.forEach((r) => {
+    const chave = r.created_at?.slice(0, 10)
+    const balde = baldes.find((b) => b.chave === chave)
+    if (balde) {
+      balde.quantidade += 1
+      if (r.nota !== null) {
+        balde.somaNotas += r.nota
+        balde.comNota += 1
+      }
+    }
+  })
+
+  return baldes.map((b) => ({ ...b, media: b.comNota ? b.somaNotas / b.comNota : null }))
+}
+
+function formatarData(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 function exportarCSV(respostas) {
   const cabecalho = ['Data', 'Unidade', 'Nota', 'Comentário']
   const linhas = respostas.map((r) => [
     formatarData(r.created_at),
-    r.totens?.unidades?.nome || '',
+    r.totens?.unidades?.nome || 'Locarti',
     r.nota ?? '',
     (r.comentario || '').replace(/"/g, '""'),
   ])
 
   const csv = [cabecalho, ...linhas]
-    .map((linha) => linha.map((valor) => `"${valor}"`).join(','))
+    .map((linha) => linha.map((v) => `"${v}"`).join(','))
     .join('\n')
 
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `respostas-satisfy-${new Date().toISOString().slice(0, 10)}.csv`
+  link.download = `metricas-${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
   URL.revokeObjectURL(url)
-}
-
-function calcularVolume(respostas, diasJanela, porSemana) {
-  const hoje = new Date()
-  const baldes = []
-
-  if (porSemana) {
-    const semanas = Math.ceil(diasJanela / 7)
-    for (let i = semanas - 1; i >= 0; i--) {
-      const fimSemana = new Date(hoje)
-      fimSemana.setDate(hoje.getDate() - i * 7)
-      const inicioSemana = new Date(fimSemana)
-      inicioSemana.setDate(fimSemana.getDate() - 6)
-      baldes.push({
-        chave: inicioSemana.toISOString().slice(0, 10),
-        label: inicioSemana.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        inicio: inicioSemana,
-        fim: fimSemana,
-        quantidade: 0,
-      })
-    }
-
-    respostas.forEach((r) => {
-      const data = new Date(r.created_at)
-      const balde = baldes.find((b) => data >= diaZero(b.inicio) && data <= fimDoDia(b.fim))
-      if (balde) balde.quantidade += 1
-    })
-  } else {
-    for (let i = diasJanela - 1; i >= 0; i--) {
-      const data = new Date(hoje)
-      data.setDate(hoje.getDate() - i)
-      baldes.push({
-        chave: data.toISOString().slice(0, 10),
-        label: data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
-        quantidade: 0,
-      })
-    }
-
-    respostas.forEach((r) => {
-      const chave = r.created_at?.slice(0, 10)
-      const balde = baldes.find((b) => b.chave === chave)
-      if (balde) balde.quantidade += 1
-    })
-  }
-
-  return baldes
-}
-
-function diaZero(data) {
-  const d = new Date(data)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function fimDoDia(data) {
-  const d = new Date(data)
-  d.setHours(23, 59, 59, 999)
-  return d
-}
-
-function formatarData(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
-const estilos = {
-  filtroRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 },
-  filtroLabel: { fontSize: 13, fontWeight: 500, color: 'var(--ink-soft)' },
-  filtroSelect: { padding: '8px 12px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13, background: '#fff' },
-  statsRow: { display: 'flex', gap: 16, flexWrap: 'wrap' },
-  statBox: {
-    flex: '1 1 140px',
-    background: 'var(--paper)',
-    border: '1px solid var(--line)',
-    borderRadius: 8,
-    padding: '16px 18px',
-  },
-  statValor: {
-    fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 28,
-    fontWeight: 700,
-    color: 'var(--ink)',
-  },
-  statLabel: { fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 },
-  subtitulo: { fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' },
-  barrasWrap: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 100, padding: '0 4px', overflowX: 'auto' },
-  barraCol: { flex: '1 0 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 18 },
-  barra: { width: '100%', background: 'var(--amber)', borderRadius: '4px 4px 0 0', minHeight: 4 },
-  barraLabel: { fontSize: 10, color: 'var(--ink-soft)', textTransform: 'capitalize', whiteSpace: 'nowrap' },
-  perguntaTitulo: { fontSize: 14, fontWeight: 600, marginBottom: 8 },
-  perguntaMedia: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: 'var(--amber-deep)' },
 }
