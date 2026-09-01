@@ -1530,3 +1530,296 @@ a {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ========================================================
+   ANIMAÇÕES DE TRANSIÇÃO E FEEDBACK DO TOTEM
+   ======================================================== */
+
+/* 1. Efeito pulsante suave para o botão de início sobreposto ao banner */
+@keyframes totemCtaPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.bannerCta,
+[style*="bannerCta"] {
+  animation: totemCtaPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+
+/* 2. Entrada suave (Slide Up + Fade In) para cada pergunta */
+@keyframes totemQuestionSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.perguntaContainer > div,
+[style*="conteudoCentralizado"] > div {
+  animation: totemQuestionSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* 3. Feedback tátil ao tocar/clicar em qualquer opção (Estrelas, Emojis, NPS, Listas) */
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+[style*="estrelaBotao"]:active,
+[style*="carinhaBotao"]:active,
+[style*="npsBotao"]:active,
+[style*="opcaoBotao"]:active,
+.btnNav:active {
+  transform: scale(0.92) !important;
+  transition: transform 0.08s ease-in-out !important;
+}
+
+/* 4. Animação de entrada e rotação do selo de Concluído (Check) */
+@keyframes totemCheckPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
+  }
+  70% {
+    transform: scale(1.15) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+[style*="obrigadoWrap"] [style*="check"] {
+  animation: totemCheckPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) both !important;
+}
+
+/* ========================================================
+   RESPONSIVIDADE DO TOTEM (1080x1920 & 1920x1080)
+   ======================================================== */
+
+/* Contêiner Geral */
+.totem-root {
+  width: 100vw;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8fafc;
+}
+
+/* Banner em tela cheia */
+.totem-banner-wrap {
+  width: 100vw;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.totem-banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+}
+
+.totem-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.15) 50%, transparent 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: clamp(24px, 8vh, 80px);
+  z-index: 2;
+}
+
+.totem-cta-btn {
+  padding: clamp(14px, 2.2vh, 26px) clamp(28px, 6vw, 68px);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: clamp(18px, 2.8vw, 30px);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  animation: totemCtaPulse 2.4s infinite;
+}
+
+/* Barra Superior de Navegação */
+.totem-nav-bar {
+  height: clamp(56px, 9vh, 90px);
+  padding: 0 clamp(16px, 4vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.totem-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: clamp(8px, 1.2vh, 14px) clamp(14px, 2vw, 24px);
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: clamp(13px, 1.6vw, 17px);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.totem-step-counter {
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 700;
+  color: #64748b;
+}
+
+/* Área de Conteúdo da Pergunta */
+.totem-content-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3vh, 36px) clamp(16px, 5vw, 64px);
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.totem-card-body {
+  width: 100%;
+  max-width: min(92vw, 760px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: auto 0;
+}
+
+.totem-question-title {
+  font-size: clamp(22px, 3.8vw, 42px);
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: clamp(20px, 4vh, 48px);
+  line-height: 1.25;
+}
+
+/* 1. NPS Grid (0 a 10) */
+.totem-nps-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(6px, 1.2vw, 14px);
+  justify-content: center;
+  width: 100%;
+}
+
+.totem-nps-btn {
+  flex: 1 1 clamp(38px, 6.5vw, 62px);
+  max-width: clamp(44px, 7vw, 68px);
+  aspect-ratio: 1 / 1;
+  border-radius: clamp(8px, 1.2vw, 14px);
+  border: 2px solid;
+  font-size: clamp(15px, 2vw, 24px);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 2. Estrelas */
+.totem-stars-row {
+  display: flex;
+  gap: clamp(8px, 2.5vw, 28px);
+  justify-content: center;
+}
+
+.totem-star-btn {
+  font-size: clamp(48px, 10vw, 110px);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* 3. Emojis / Carinhas */
+.totem-emojis-row {
+  display: flex;
+  gap: clamp(10px, 2.5vw, 36px);
+  justify-content: center;
+}
+
+.totem-emoji-btn {
+  font-size: clamp(42px, 8.5vw, 92px);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+/* 4. Lista de Múltipla Escolha / Única Escolha */
+.totem-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.8vh, 18px);
+  width: 100%;
+}
+
+.totem-option-btn {
+  width: 100%;
+  padding: clamp(14px, 2.2vh, 24px) clamp(18px, 3vw, 32px);
+  border-radius: clamp(10px, 1.5vw, 16px);
+  border: 2px solid;
+  font-size: clamp(15px, 2vw, 22px);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+/* Ajustes para telas horizontais baixas (Laptops e Tablets em Paisagem) */
+@media (orientation: landscape) and (max-height: 720px) {
+  .totem-question-title {
+    margin-bottom: 16px;
+    font-size: clamp(18px, 3vw, 28px);
+  }
+
+  .totem-star-btn {
+    font-size: clamp(40px, 7vw, 68px);
+  }
+
+  .totem-emoji-btn {
+    font-size: clamp(36px, 6vw, 60px);
+  }
+
+  .totem-option-btn {
+    padding: 10px 18px;
+    font-size: 15px;
+  }
+}

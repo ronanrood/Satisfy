@@ -10,11 +10,8 @@ const ETAPAS = {
   OBRIGADO: 'obrigado',
 }
 
-const TEMPO_RESET_MS = 8000
-
-// tipos que geram uma "nota" numérica pro resumo do dashboard
+const TEMPO_RESET_MS = 2000
 const TIPOS_NOTA = ['estrelas', 'carinhas', 'nps', 'nota', 'escala_opiniao']
-// tipos de texto livre que entram no campo "comentário" do resumo
 const TIPOS_TEXTO = ['comentario', 'texto_curto']
 
 export default function Totem() {
@@ -25,7 +22,7 @@ export default function Totem() {
   const [config, setConfig] = useState(null)
 
   const [indice, setIndice] = useState(0)
-  const [respostas, setRespostas] = useState([]) // [{ pergunta_id, tipo, resposta }]
+  const [respostas, setRespostas] = useState([])
   const [textoAtual, setTextoAtual] = useState('')
   const [selecoesAtuais, setSelecoesAtuais] = useState([])
   const [mensagemFinal, setMensagemFinal] = useState(null)
@@ -99,7 +96,6 @@ export default function Totem() {
   const perguntas = pesquisa?.perguntas?.length ? pesquisa.perguntas : []
   const perguntaAtual = perguntas[indice]
 
-  // Carrega estado anterior se o usuário voltar para uma pergunta já respondida
   useEffect(() => {
     if (etapa === ETAPAS.PERGUNTA && perguntaAtual) {
       const respAnterior = respostas.find((r) => r.pergunta_id === perguntaAtual.id)
@@ -132,9 +128,17 @@ export default function Totem() {
 
   function voltarPergunta() {
     if (indice > 0) {
-      setIndice(indice - 1)
+      setIndice((prev) => prev - 1)
     } else {
       reiniciar()
+    }
+  }
+
+  function avancarPerguntaSemAlterar() {
+    if (indice + 1 < perguntas.length) {
+      setIndice((prev) => prev + 1)
+    } else {
+      finalizar(respostas)
     }
   }
 
@@ -144,15 +148,13 @@ export default function Totem() {
     }
 
     const novaResposta = { pergunta_id: perguntaAtual.id, tipo: perguntaAtual.tipo, resposta: valor }
-    
-    // Substitui se já existia resposta para essa pergunta ou adiciona nova
     const respostasAtualizadas = respostas.filter((r) => r.pergunta_id !== perguntaAtual.id)
     const todasRespostas = [...respostasAtualizadas, novaResposta]
-    
+
     setRespostas(todasRespostas)
 
     if (indice + 1 < perguntas.length) {
-      setIndice(indice + 1)
+      setIndice((prev) => prev + 1)
     } else {
       finalizar(todasRespostas)
     }
@@ -180,96 +182,129 @@ export default function Totem() {
   }
 
   const corPrimaria = config?.cor_primaria || '#e8a33d'
+  const temRespostaAtual = respostas.some((r) => r.pergunta_id === perguntaAtual?.id)
 
-  if (etapa === ETAPAS.CARREGANDO) return <TelaCentral>Carregando…</TelaCentral>
+  if (etapa === ETAPAS.CARREGANDO) {
+    return <div className="totem-root" style={{ justifyContent: 'center', alignItems: 'center', color: '#64748b' }}>Carregando…</div>
+  }
 
   if (etapa === ETAPAS.ERRO) {
     return (
-      <TelaCentral>
-        Este totem não está configurado corretamente.
-        <div style={{ fontSize: 14, marginTop: 8, opacity: 0.6 }}>Avise o suporte do Satisfy.</div>
-      </TelaCentral>
+      <div className="totem-root" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: 24, color: '#64748b' }}>
+        <h2 style={{ color: '#0f172a', marginBottom: 8 }}>Totem não configurado ou inativo.</h2>
+        <p style={{ margin: 0, opacity: 0.7 }}>Verifique a conexão ou a URL do dispositivo.</p>
+      </div>
     )
   }
 
   return (
-    <div style={estilos.tela}>
+    <div className="totem-root">
       {etapa === ETAPAS.BANNER && (
-        <TelaBanner config={config} corPrimaria={corPrimaria} onIniciar={iniciar} />
+        <div className="totem-banner-wrap" onClick={iniciar}>
+          {config?.banner_url ? (
+            <img src={config.banner_url} alt="Banner" className="totem-banner-img" />
+          ) : (
+            <div style={{ zIndex: 2, padding: 32, textAlign: 'center', background: 'rgba(255,255,255,0.95)', borderRadius: 24, maxWidth: '85vw' }}>
+              {config?.logo_url && <img src={config.logo_url} alt="Logo" style={{ height: 80, marginBottom: 24 }} />}
+              <h1 className="totem-question-title" style={{ marginBottom: 0 }}>
+                {config?.texto_boas_vindas || 'Sua opinião é fundamental!'}
+              </h1>
+            </div>
+          )}
+
+          <div className="totem-banner-overlay">
+            <button
+              className="totem-cta-btn"
+              style={{ backgroundColor: corPrimaria }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onIniciar(iniciar)
+              }}
+            >
+              {config?.texto_botao_iniciar || 'Toque para avaliar'}
+            </button>
+          </div>
+        </div>
       )}
 
       {etapa === ETAPAS.PERGUNTA && perguntaAtual && (
-        <div style={estilos.perguntaContainer}>
-          {/* Barra superior de navegação e progresso */}
-          <div style={estilos.barraProgressoWrap}>
-            <button onClick={voltarPergunta} style={estilos.botaoVoltar} aria-label="Voltar pergunta">
-              <span style={{ fontSize: 20 }}>←</span> Voltar
+        <>
+          <div className="totem-nav-bar">
+            <button onClick={voltarPergunta} className="totem-nav-btn" aria-label="Voltar">
+              <span style={{ fontSize: '1.2em' }}>←</span>
+              <span>{indice === 0 ? 'Início' : 'Voltar'}</span>
             </button>
 
-            <span style={estilos.indicadorPassos}>
-              {indice + 1} de {perguntas.length}
+            <span className="totem-step-counter">
+              {indice + 1} / {perguntas.length}
             </span>
 
-            {/* Barra de progresso visual */}
-            <div style={estilos.progressoTrack}>
-              <div
-                style={{
-                  ...estilos.progressoFill,
-                  width: `${((indice + 1) / perguntas.length) * 100}%`,
-                  background: corPrimaria,
-                }}
+            <button
+              onClick={avancarPerguntaSemAlterar}
+              className="totem-nav-btn"
+              style={{
+                visibility: temRespostaAtual || indice + 1 === perguntas.length ? 'visible' : 'hidden',
+              }}
+              aria-label="Avançar"
+            >
+              <span>{indice + 1 === perguntas.length ? 'Finalizar' : 'Prosseguir'}</span>
+              <span style={{ fontSize: '1.2em' }}>→</span>
+            </button>
+          </div>
+
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 6, background: '#e2e8f0', zIndex: 11 }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${((indice + 1) / perguntas.length) * 100}%`,
+                background: corPrimaria,
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+
+          <div className="totem-content-area">
+            <div className="totem-card-body">
+              <TelaPergunta
+                pergunta={perguntaAtual}
+                corPrimaria={corPrimaria}
+                respostaPrevia={respostas.find((r) => r.pergunta_id === perguntaAtual.id)?.resposta}
+                textoAtual={textoAtual}
+                setTextoAtual={setTextoAtual}
+                selecoesAtuais={selecoesAtuais}
+                setSelecoesAtuais={setSelecoesAtuais}
+                enviando={enviando}
+                onResponder={responderEAvancar}
               />
             </div>
           </div>
-
-          <TelaPergunta
-            pergunta={perguntaAtual}
-            corPrimaria={corPrimaria}
-            respostaPrevia={respostas.find((r) => r.pergunta_id === perguntaAtual.id)?.resposta}
-            textoAtual={textoAtual}
-            setTextoAtual={setTextoAtual}
-            selecoesAtuais={selecoesAtuais}
-            setSelecoesAtuais={setSelecoesAtuais}
-            enviando={enviando}
-            onResponder={responderEAvancar}
-          />
-        </div>
+        </>
       )}
 
       {etapa === ETAPAS.OBRIGADO && (
-        <div style={estilos.obrigadoWrap}>
-          <div style={{ ...estilos.check, background: corPrimaria }}>✓</div>
-          <h1 style={estilos.titulo}>{mensagemFinal || 'Obrigado pela sua avaliação!'}</h1>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+          <div
+            style={{
+              width: 90,
+              height: 90,
+              borderRadius: '50%',
+              background: corPrimaria,
+              color: '#fff',
+              fontSize: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 24,
+              boxShadow: '0 12px 28px rgba(0,0,0,0.15)',
+            }}
+          >
+            ✓
+          </div>
+          <h1 className="totem-question-title" style={{ margin: 0 }}>
+            {mensagemFinal || 'Obrigado pela sua avaliação!'}
+          </h1>
         </div>
       )}
-    </div>
-  )
-}
-
-function TelaBanner({ config, corPrimaria, onIniciar }) {
-  return (
-    <div style={estilos.bannerContainer} onClick={onIniciar}>
-      {config?.banner_url ? (
-        <img src={config.banner_url} alt="Banner" style={estilos.bannerImagemFull} />
-      ) : (
-        <div style={{ ...estilos.bannerPlaceholder, borderColor: corPrimaria }}>
-          {config?.logo_url && <img src={config.logo_url} alt="" style={{ height: 64, marginBottom: 24 }} />}
-          <h1 style={estilos.titulo}>{config?.texto_boas_vindas || 'Queremos saber sua opinião!'}</h1>
-        </div>
-      )}
-
-      {/* Camada sobreposta com botão chamativo */}
-      <div style={estilos.bannerOverlay}>
-        <button
-          style={{ ...estilos.bannerCta, background: corPrimaria }}
-          onClick={(e) => {
-            e.stopPropagation()
-            onIniciar()
-          }}
-        >
-          {config?.texto_botao_iniciar || 'Toque para começar'}
-        </button>
-      </div>
     </div>
   )
 }
@@ -289,41 +324,42 @@ function TelaPergunta({
 
   if (['boas_vindas', 'imagem', 'encerramento'].includes(tipo)) {
     return (
-      <div style={{ width: '100%', maxWidth: 580, margin: '0 auto' }}>
+      <div style={{ width: '100%' }}>
         {pergunta.imagem_url && (
           <img
             src={pergunta.imagem_url}
             alt=""
-            style={{ maxWidth: '100%', maxHeight: 320, borderRadius: 12, marginBottom: 28, objectFit: 'contain' }}
+            style={{ maxWidth: '100%', maxHeight: '40vh', borderRadius: 16, marginBottom: 24, objectFit: 'contain' }}
           />
         )}
-        <h1 style={estilos.titulo}>{pergunta.texto}</h1>
+        <h1 className="totem-question-title">{pergunta.texto}</h1>
         <button
-          style={{ ...estilos.botaoEnviar, background: corPrimaria, flex: 'none', padding: '16px 48px' }}
+          className="totem-cta-btn"
+          style={{ backgroundColor: corPrimaria, width: '100%', maxWidth: 420 }}
           onClick={() => onResponder(null)}
           disabled={enviando}
         >
-          {tipo === 'encerramento' ? (enviando ? 'Enviando…' : 'Concluir') : 'Continuar'}
+          {tipo === 'encerramento' ? (enviando ? 'Enviando…' : 'Finalizar') : 'Continuar'}
         </button>
       </div>
     )
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 540, margin: '0 auto' }}>
-      <h1 style={estilos.titulo}>{pergunta.texto}</h1>
+    <div style={{ width: '100%' }}>
+      <h1 className="totem-question-title">{pergunta.texto}</h1>
 
       {tipo === 'estrelas' && (
-        <div style={estilos.estrelasRow}>
+        <div className="totem-stars-row">
           {[1, 2, 3, 4, 5].map((v) => {
-            const selecionado = respostaPrevia !== undefined && v <= respostaPrevia
+            const ativo = respostaPrevia !== undefined && v <= respostaPrevia
             return (
               <button
                 key={v}
+                className="totem-star-btn"
                 style={{
-                  ...estilos.estrelaBotao,
-                  color: selecionado ? corPrimaria : '#d1d8de',
-                  transform: selecionado ? 'scale(1.1)' : 'none',
+                  color: ativo ? corPrimaria : '#cbd5e1',
+                  transform: ativo ? 'scale(1.15)' : 'none',
                 }}
                 onClick={() => onResponder(v)}
                 aria-label={`${v} estrelas`}
@@ -336,19 +372,20 @@ function TelaPergunta({
       )}
 
       {tipo === 'carinhas' && (
-        <div style={estilos.carinhasRow}>
+        <div className="totem-emojis-row">
           {[
             { v: 1, e: '😡' },
             { v: 2, e: '😕' },
             { v: 3, e: '😐' },
             { v: 4, e: '🙂' },
-            { v: 5, e: '😄' },
+            { v: 5, e: '😍' },
           ].map((o) => (
             <button
               key={o.v}
+              className="totem-emoji-btn"
               style={{
-                ...estilos.carinhaBotao,
                 transform: respostaPrevia === o.v ? 'scale(1.25)' : 'none',
+                filter: respostaPrevia && respostaPrevia !== o.v ? 'grayscale(0.7) opacity(0.5)' : 'none',
               }}
               onClick={() => onResponder(o.v)}
             >
@@ -359,17 +396,18 @@ function TelaPergunta({
       )}
 
       {(tipo === 'nps' || tipo === 'nota') && (
-        <div style={estilos.npsGrid}>
+        <div className="totem-nps-grid">
           {Array.from({ length: 11 }, (_, i) => i).map((v) => {
             const marcado = respostaPrevia === v
             return (
               <button
                 key={v}
+                className="totem-nps-btn"
                 style={{
-                  ...estilos.npsBotao,
                   borderColor: corPrimaria,
-                  background: marcado ? corPrimaria : '#fff',
-                  color: marcado ? '#fff' : '#16212b',
+                  backgroundColor: marcado ? corPrimaria : '#ffffff',
+                  color: marcado ? '#ffffff' : '#0f172a',
+                  transform: marcado ? 'scale(1.08)' : 'none',
                 }}
                 onClick={() => onResponder(v)}
               >
@@ -381,7 +419,7 @@ function TelaPergunta({
       )}
 
       {tipo === 'escala_opiniao' && (
-        <div style={estilos.npsGrid}>
+        <div className="totem-nps-grid">
           {Array.from(
             { length: (pergunta.escala_max ?? 5) - (pergunta.escala_min ?? 1) + 1 },
             (_, i) => (pergunta.escala_min ?? 1) + i
@@ -390,11 +428,12 @@ function TelaPergunta({
             return (
               <button
                 key={v}
+                className="totem-nps-btn"
                 style={{
-                  ...estilos.npsBotao,
                   borderColor: corPrimaria,
-                  background: marcado ? corPrimaria : '#fff',
-                  color: marcado ? '#fff' : '#16212b',
+                  backgroundColor: marcado ? corPrimaria : '#ffffff',
+                  color: marcado ? '#ffffff' : '#0f172a',
+                  transform: marcado ? 'scale(1.08)' : 'none',
                 }}
                 onClick={() => onResponder(v)}
               >
@@ -406,77 +445,75 @@ function TelaPergunta({
       )}
 
       {(tipo === 'comentario' || tipo === 'texto_curto') && (
-        <>
+        <div style={{ width: '100%', maxWidth: 540, margin: '0 auto' }}>
           {tipo === 'comentario' ? (
             <textarea
-              style={estilos.textarea}
+              style={{
+                width: '100%',
+                padding: 16,
+                borderRadius: 14,
+                border: '2px solid #cbd5e1',
+                fontSize: 18,
+                boxSizing: 'border-box',
+                outline: 'none',
+                fontFamily: 'inherit',
+              }}
               value={textoAtual}
               onChange={(e) => setTextoAtual(e.target.value)}
-              placeholder="Escreva sua resposta (opcional)"
+              placeholder="Digite seu feedback aqui..."
               rows={4}
               autoFocus
             />
           ) : (
             <input
-              style={estilos.inputCurto}
+              style={{
+                width: '100%',
+                padding: 16,
+                borderRadius: 14,
+                border: '2px solid #cbd5e1',
+                fontSize: 18,
+                boxSizing: 'border-box',
+                outline: 'none',
+                fontFamily: 'inherit',
+              }}
               value={textoAtual}
               onChange={(e) => setTextoAtual(e.target.value)}
-              placeholder="Escreva sua resposta (opcional)"
+              placeholder="Digite sua resposta..."
               autoFocus
             />
           )}
-          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-            <button style={estilos.botaoPular} onClick={() => onResponder('')} disabled={enviando}>
+          <div style={{ display: 'flex', gap: 14, marginTop: 20 }}>
+            <button
+              style={{ flex: 1, padding: '16px 0', borderRadius: 12, border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
+              onClick={() => onResponder('')}
+              disabled={enviando}
+            >
               Pular
             </button>
             <button
-              style={{ ...estilos.botaoEnviar, background: corPrimaria }}
+              style={{ flex: 2, padding: '16px 0', borderRadius: 12, border: 'none', background: corPrimaria, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
               onClick={() => onResponder(textoAtual.trim())}
               disabled={enviando}
             >
               {enviando ? 'Enviando…' : 'Continuar'}
             </button>
           </div>
-        </>
-      )}
-
-      {tipo === 'data' && (
-        <>
-          <input
-            type="date"
-            style={estilos.inputCurto}
-            value={textoAtual}
-            onChange={(e) => setTextoAtual(e.target.value)}
-            autoFocus
-          />
-          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-            <button style={estilos.botaoPular} onClick={() => onResponder(null)} disabled={enviando}>
-              Pular
-            </button>
-            <button
-              style={{ ...estilos.botaoEnviar, background: corPrimaria }}
-              onClick={() => onResponder(textoAtual || null)}
-              disabled={enviando || !textoAtual}
-            >
-              {enviando ? 'Enviando…' : 'Continuar'}
-            </button>
-          </div>
-        </>
+        </div>
       )}
 
       {tipo === 'escolha_unica' && (
-        <div style={estilos.opcoesColuna}>
+        <div className="totem-options-list" style={{ maxWidth: 580, margin: '0 auto' }}>
           {(pergunta.opcoes || []).map((opcao) => {
             const marcado = respostaPrevia === opcao
             return (
               <button
                 key={opcao}
+                className="totem-option-btn"
                 style={{
-                  ...estilos.opcaoBotao,
-                  borderColor: corPrimaria,
-                  background: marcado ? corPrimaria : '#fff',
-                  color: marcado ? '#fff' : '#16212b',
-                  fontWeight: marcado ? 700 : 500,
+                  borderColor: marcado ? corPrimaria : '#e2e8f0',
+                  backgroundColor: marcado ? corPrimaria : '#ffffff',
+                  color: marcado ? '#ffffff' : '#0f172a',
+                  transform: marcado ? 'scale(1.02)' : 'none',
                 }}
                 onClick={() => onResponder(opcao)}
               >
@@ -488,18 +525,18 @@ function TelaPergunta({
       )}
 
       {tipo === 'escolha_multipla' && (
-        <>
-          <div style={estilos.opcoesColuna}>
+        <div style={{ width: '100%', maxWidth: 580, margin: '0 auto' }}>
+          <div className="totem-options-list">
             {(pergunta.opcoes || []).map((opcao) => {
               const marcada = selecoesAtuais.includes(opcao)
               return (
                 <button
                   key={opcao}
+                  className="totem-option-btn"
                   style={{
-                    ...estilos.opcaoBotao,
-                    borderColor: corPrimaria,
-                    background: marcada ? corPrimaria : '#fff',
-                    color: marcada ? '#fff' : '#16212b',
+                    borderColor: marcada ? corPrimaria : '#e2e8f0',
+                    backgroundColor: marcada ? corPrimaria : '#ffffff',
+                    color: marcada ? '#ffffff' : '#0f172a',
                   }}
                   onClick={() =>
                     setSelecoesAtuais((prev) =>
@@ -507,245 +544,22 @@ function TelaPergunta({
                     )
                   }
                 >
-                  {marcada ? '✓ ' : ''}{opcao}
+                  <span style={{ marginRight: 12 }}>{marcada ? '☑' : '☐'}</span>
+                  {opcao}
                 </button>
               )
             })}
           </div>
           <button
-            style={{ ...estilos.botaoEnviar, background: corPrimaria, flex: 'none', padding: '16px 48px', marginTop: 24 }}
+            className="totem-cta-btn"
+            style={{ backgroundColor: corPrimaria, width: '100%', marginTop: 28 }}
             onClick={() => onResponder(selecoesAtuais)}
             disabled={enviando}
           >
-            {enviando ? 'Enviando…' : 'Continuar'}
+            {enviando ? 'Enviando…' : 'Confirmar Seleção'}
           </button>
-        </>
+        </div>
       )}
     </div>
   )
-}
-
-function TelaCentral({ children }) {
-  return <div style={{ ...estilos.tela, color: '#8a97a1' }}>{children}</div>
-}
-
-const estilos = {
-  tela: {
-    minHeight: '100vh',
-    width: '100vw',
-    margin: 0,
-    padding: 0,
-    overflow: 'hidden',
-    position: 'relative',
-    background: '#f8fafc',
-    fontFamily: "'Inter', sans-serif",
-  },
-  bannerContainer: {
-    position: 'relative',
-    width: '100vw',
-    height: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    background: '#0f172a',
-    overflow: 'hidden',
-  },
-  bannerImagemFull: {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    objectPosition: 'center',
-  },
-  bannerOverlay: {
-    position: 'absolute',
-    inset: 0,
-    background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 40%, transparent 100%)',
-    display: 'flex',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingBottom: '8vh',
-    zIndex: 2,
-  },
-  bannerPlaceholder: {
-    zIndex: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: 48,
-    border: '2px dashed',
-    borderRadius: 20,
-    background: 'rgba(255,255,255,0.9)',
-    maxWidth: '80vw',
-  },
-  bannerCta: {
-    padding: '20px 48px',
-    borderRadius: 999,
-    color: '#fff',
-    fontSize: 'clamp(18px, 2.5vw, 24px)',
-    fontWeight: 700,
-    fontFamily: "'Space Grotesk', sans-serif",
-    border: 'none',
-    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.35)',
-    cursor: 'pointer',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-  },
-  perguntaContainer: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '32px 24px',
-    boxSizing: 'border-box',
-    position: 'relative',
-  },
-  barraProgressoWrap: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    padding: '20px 32px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  botaoVoltar: {
-    background: 'transparent',
-    border: '1px solid #d1d8de',
-    color: '#475569',
-    fontSize: 15,
-    fontWeight: 600,
-    borderRadius: 8,
-    padding: '8px 16px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    transition: 'all 0.2s ease',
-  },
-  indicadorPassos: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: 600,
-  },
-  progressoTrack: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: 6,
-    background: '#e2e8f0',
-  },
-  progressoFill: {
-    height: '100%',
-    transition: 'width 0.3s ease',
-  },
-  titulo: {
-    fontFamily: "'Space Grotesk', sans-serif",
-    fontSize: 'clamp(24px, 3.5vw, 38px)',
-    fontWeight: 700,
-    color: '#0f172a',
-    marginBottom: 36,
-    lineHeight: 1.25,
-    textAlign: 'center',
-  },
-  estrelasRow: { display: 'flex', gap: 14, justifyContent: 'center' },
-  estrelaBotao: {
-    fontSize: 'clamp(52px, 8vw, 76px)',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    lineHeight: 1,
-    padding: 6,
-    transition: 'all 0.2s ease',
-  },
-  carinhasRow: { display: 'flex', gap: 18, justifyContent: 'center' },
-  carinhaBotao: {
-    fontSize: 'clamp(48px, 7vw, 68px)',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: 6,
-    transition: 'transform 0.2s ease',
-  },
-  npsGrid: { display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', maxWidth: 560, margin: '0 auto' },
-  npsBotao: {
-    width: 52,
-    height: 52,
-    borderRadius: 10,
-    border: '2px solid',
-    fontSize: 18,
-    fontWeight: 700,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  textarea: {
-    width: '100%',
-    padding: 16,
-    borderRadius: 12,
-    border: '1px solid #cbd5e1',
-    fontSize: 16,
-    fontFamily: "'Inter', sans-serif",
-    resize: 'none',
-    boxSizing: 'border-box',
-    background: '#fff',
-  },
-  inputCurto: {
-    width: '100%',
-    padding: 16,
-    borderRadius: 12,
-    border: '1px solid #cbd5e1',
-    fontSize: 16,
-    fontFamily: "'Inter', sans-serif",
-    boxSizing: 'border-box',
-    background: '#fff',
-  },
-  botaoPular: {
-    flex: 1,
-    padding: '16px 0',
-    borderRadius: 10,
-    border: '1px solid #cbd5e1',
-    background: '#fff',
-    color: '#475569',
-    fontSize: 16,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  botaoEnviar: {
-    flex: 2,
-    padding: '16px 0',
-    borderRadius: 10,
-    border: 'none',
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-  obrigadoWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' },
-  check: {
-    width: 84,
-    height: 84,
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#fff',
-    fontSize: 40,
-    marginBottom: 24,
-    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-  },
-  opcoesColuna: { display: 'flex', flexDirection: 'column', gap: 12, width: '100%' },
-  opcaoBotao: {
-    padding: '16px 22px',
-    borderRadius: 12,
-    border: '2px solid',
-    fontSize: 16,
-    cursor: 'pointer',
-    textAlign: 'left',
-    transition: 'all 0.2s ease',
-  },
 }
