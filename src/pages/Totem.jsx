@@ -181,7 +181,8 @@ export default function Totem() {
     setEtapa(ETAPAS.OBRIGADO)
   }
 
-  const corPrimaria = config?.cor_primaria || '#e8a33d'
+  // Usa a cor configurada especificamente para esta pesquisa; se não tiver, usa a geral ou o padrão
+  const corPrimaria = pesquisa?.cor_primaria || config?.cor_primaria || '#e8a33d'
   const temRespostaAtual = respostas.some((r) => r.pergunta_id === perguntaAtual?.id)
 
   if (etapa === ETAPAS.CARREGANDO) {
@@ -201,13 +202,18 @@ export default function Totem() {
     <div className="totem-root">
       {etapa === ETAPAS.BANNER && (
         <div className="totem-banner-wrap" onClick={iniciar}>
-          {config?.banner_url ? (
-            <img src={config.banner_url} alt="Banner" className="totem-banner-img" />
+          {/* Prioriza o banner personalizado da pesquisa ativa */}
+          {pesquisa?.banner_url || config?.banner_url ? (
+            <img 
+              src={pesquisa?.banner_url || config?.banner_url} 
+              alt="Banner" 
+              className="totem-banner-img" 
+            />
           ) : (
             <div style={{ zIndex: 2, padding: 32, textAlign: 'center', background: 'rgba(255,255,255,0.95)', borderRadius: 24, maxWidth: '85vw' }}>
               {config?.logo_url && <img src={config.logo_url} alt="Logo" style={{ height: 80, marginBottom: 24 }} />}
               <h1 className="totem-question-title" style={{ marginBottom: 0 }}>
-                {config?.texto_boas_vindas || 'Sua opinião é fundamental!'}
+                {pesquisa?.frase_abertura || config?.texto_boas_vindas || 'Sua opinião é fundamental!'}
               </h1>
             </div>
           )}
@@ -218,10 +224,10 @@ export default function Totem() {
               style={{ backgroundColor: corPrimaria }}
               onClick={(e) => {
                 e.stopPropagation()
-                onIniciar(iniciar)
+                iniciar()
               }}
             >
-              {config?.texto_botao_iniciar || 'Toque para avaliar'}
+              {pesquisa?.texto_botao || config?.texto_botao_iniciar || 'Toque para avaliar'}
             </button>
           </div>
         </div>
