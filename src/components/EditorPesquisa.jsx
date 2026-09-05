@@ -45,22 +45,107 @@ export default function EditorPesquisa({ clienteId }) {
 
   async function buscarDados() {
     setCarregando(true)
-    const { data } = await supabase
+
+    // 1. Busca as perguntas na tabela pesquisas
+    const { data: pesq } = await supabase
       .from('pesquisas')
       .select('*')
       .eq('cliente_id', clienteId)
       .eq('ativa', true)
       .maybeSingle()
 
-    if (data) {
-      setNomePesquisa(data.nome || 'Pesquisa de Satisfação')
-      setBannerUrl(data.banner_url || '')
-      setTextoBotao(data.texto_botao || 'Toque para avaliar')
-      setFraseAbertura(data.frase_abertura || 'Como foi sua experiência hoje?')
-      setCorPrimaria(data.cor_primaria || '#e8a33d')
-      setPerguntas(data.perguntas || [])
+    if (pesq) {
+      setNomePesquisa(pesq.nome || 'Pesquisa de Satisfação')
+      setPerguntas(pesq.perguntas || [])
     }
+
+    // 2. Busca a identidade visual na tabela configuracoes
+    const { data: conf } = await supabase
+      .from('configuracoes')
+      .select('*')
+      .eq('cliente_id', clienteId)
+      .is('unidade_id', null)
+      .maybeSingle()
+
+    if (conf) {
+      setBannerUrl(conf.banner_url || '')
+      setTextoBotao(conf.texto_botao_iniciar || 'Toque para avaliar')
+      setFraseAbertura(conf.texto_boas_vindas || 'Como foi sua experiência hoje?')
+      setCorPrimaria(conf.cor_primaria || '#e8a33d')
+    }
+
     setCarregando(false)
+  }
+
+  async function salvarPesquisa(e) {
+    e?.preventDefault()
+    setSalvando(true)
+
+    try {
+      // 1. Salva na tabela pesquisas (somente colunas de pesquisas)
+      const payloadPesquisa = {
+        cliente_id: clienteId,
+        nome: nomePesquisa,
+        perguntas: perguntas,
+        ativa: true,
+      }
+
+      const { data: pesqExistente } = await supabase
+        .from('pesquisas')
+        .select('id')
+        .eq('cliente_id', clienteId)
+        .eq('ativa', true)
+        .maybeSingle()
+
+      if (pesqExistente?.id) {
+        const { error } = await supabase
+          .from('pesquisas')
+          .update(payloadPesquisa)
+          .eq('id', pesqExistente.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('pesquisas')
+          .insert(payloadPesquisa)
+        if (error) throw error
+      }
+
+      // 2. Salva na tabela configuracoes (banner, cor e textos do totem)
+      const payloadConfig = {
+        cliente_id: clienteId,
+        banner_url: bannerUrl,
+        texto_botao_iniciar: textoBotao,
+        texto_boas_vindas: fraseAbertura,
+        cor_primaria: corPrimaria,
+      }
+
+      const { data: confExistente } = await supabase
+        .from('configuracoes')
+        .select('id')
+        .eq('cliente_id', clienteId)
+        .is('unidade_id', null)
+        .maybeSingle()
+
+      if (confExistente?.id) {
+        const { error } = await supabase
+          .from('configuracoes')
+          .update(payloadConfig)
+          .eq('id', confExistente.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('configuracoes')
+          .insert(payloadConfig)
+        if (error) throw error
+      }
+
+      alert('Pesquisa e banners salvos com sucesso!')
+    } catch (err) {
+      console.error('Erro ao salvar:', err)
+      alert(`Erro ao salvar: ${err.message || 'Verifique o console'}`)
+    } finally {
+      setSalvando(false)
+    }
   }
 
   // Upload direto para o bucket do Supabase Storage
