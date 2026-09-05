@@ -82,7 +82,7 @@ export default function EditorPesquisa({ clienteId }) {
     setSalvando(true)
 
     try {
-      // 1. Salva na tabela pesquisas (somente colunas de pesquisas)
+      // 1. Apenas colunas que REALMENTE existem na tabela 'pesquisas'
       const payloadPesquisa = {
         cliente_id: clienteId,
         nome: nomePesquisa,
@@ -90,27 +90,29 @@ export default function EditorPesquisa({ clienteId }) {
         ativa: true,
       }
 
-      const { data: pesqExistente } = await supabase
+      const { data: pesqExistente, error: errBuscaPesq } = await supabase
         .from('pesquisas')
         .select('id')
         .eq('cliente_id', clienteId)
         .eq('ativa', true)
         .maybeSingle()
 
+      if (errBuscaPesq) throw errBuscaPesq
+
       if (pesqExistente?.id) {
-        const { error } = await supabase
+        const { error: errUpdate } = await supabase
           .from('pesquisas')
           .update(payloadPesquisa)
           .eq('id', pesqExistente.id)
-        if (error) throw error
+        if (errUpdate) throw errUpdate
       } else {
-        const { error } = await supabase
+        const { error: errInsert } = await supabase
           .from('pesquisas')
           .insert(payloadPesquisa)
-        if (error) throw error
+        if (errInsert) throw errInsert
       }
 
-      // 2. Salva na tabela configuracoes (banner, cor e textos do totem)
+      // 2. Colunas visuais vão para a tabela 'configuracoes'
       const payloadConfig = {
         cliente_id: clienteId,
         banner_url: bannerUrl,
@@ -119,30 +121,32 @@ export default function EditorPesquisa({ clienteId }) {
         cor_primaria: corPrimaria,
       }
 
-      const { data: confExistente } = await supabase
+      const { data: confExistente, error: errBuscaConf } = await supabase
         .from('configuracoes')
         .select('id')
         .eq('cliente_id', clienteId)
         .is('unidade_id', null)
         .maybeSingle()
 
+      if (errBuscaConf) throw errBuscaConf
+
       if (confExistente?.id) {
-        const { error } = await supabase
+        const { error: errUpdateConf } = await supabase
           .from('configuracoes')
           .update(payloadConfig)
           .eq('id', confExistente.id)
-        if (error) throw error
+        if (errUpdateConf) throw errUpdateConf
       } else {
-        const { error } = await supabase
+        const { error: errInsertConf } = await supabase
           .from('configuracoes')
           .insert(payloadConfig)
-        if (error) throw error
+        if (errInsertConf) throw errInsertConf
       }
 
       alert('Pesquisa e banners salvos com sucesso!')
     } catch (err) {
       console.error('Erro ao salvar:', err)
-      alert(`Erro ao salvar: ${err.message || 'Verifique o console'}`)
+      alert(`Erro: ${err.message || 'Falha ao salvar'}`)
     } finally {
       setSalvando(false)
     }
