@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useParams, useNavigate, Link } from 'react-router-dom'
+import { NavLink, Outlet, useParams, useNavigate, Link, useLocation } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  Kanban,
+  MessageSquare,
+  Users,
+  Calendar,
+  ShieldCheck,
+  Settings,
+  Bot,
+  ChevronDown,
+} from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import logo from '../img/logo.png'
+import SDROnboardingWizard from './sdr/SDROnboardingWizard'
+import { sdrService } from '../services/sdrService'
 
 const ICONES = {
   dashboard: (
@@ -45,14 +58,32 @@ const ICONE_SAIR = (
 export default function ClienteLayout() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [cliente, setCliente] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [editando, setEditando] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
+  const [wizardAberto, setWizardAberto] = useState(false)
+  const [sdrConfigurado, setSdrConfigurado] = useState(false)
+
+  // Auto-expand SDR submenu if current route is under sdr
+  const isSdrRoute = location.pathname.includes('/sdr/')
+  const [sdrAberto, setSdrAberto] = useState(isSdrRoute)
+
+  useEffect(() => {
+    if (isSdrRoute && !sdrAberto) setSdrAberto(true)
+  }, [isSdrRoute])
 
   useEffect(() => {
     buscarCliente()
+    verificarConfiguracaoSDR()
   }, [id])
+
+  function verificarConfiguracaoSDR() {
+    if (!id) return
+    const settings = sdrService.getSettings(id)
+    setSdrConfigurado(!!settings?.is_configured)
+  }
 
   async function buscarCliente() {
     setCarregando(true)
@@ -77,6 +108,29 @@ export default function ClienteLayout() {
     { to: 'dispositivos', label: 'Dispositivos', icone: ICONES.dispositivos },
   ]
 
+  // Submenu items matching screenshot 2 from Lovable
+  const sdrSubmenuLinks = [
+    { to: 'sdr/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+    { to: 'sdr/pipeline', label: 'Pipeline', Icon: Kanban },
+    { to: 'sdr/chat', label: 'Chat Ao Vivo', Icon: MessageSquare },
+    { to: 'sdr/contacts', label: 'Contatos', Icon: Users },
+    { to: 'sdr/scheduling', label: 'Agendamentos', Icon: Calendar },
+    { to: 'sdr/team', label: 'Equipe', Icon: ShieldCheck },
+    { to: 'sdr/settings', label: 'Configurações', Icon: Settings },
+  ]
+
+  const handleSDRClick = () => {
+    setSdrAberto(!sdrAberto)
+    if (!isSdrRoute) {
+      navigate(`sdr/dashboard`)
+    }
+  }
+
+  const handleWizardCompleted = (settings) => {
+    setSdrConfigurado(true)
+    setSdrAberto(true)
+  }
+
   return (
     <div className="shell">
       <button className="hamburger-btn" onClick={() => setMenuAberto(true)} aria-label="Abrir menu">☰</button>
@@ -100,6 +154,43 @@ export default function ClienteLayout() {
               {l.icone}{l.label}
             </NavLink>
           ))}
+
+          {/* SDR Group with Submenu - ALWAYS ACCESSIBLE */}
+          <div className="sidebar-submenu" style={{ marginTop: 6 }}>
+            <button
+              className={`sidebar-submenu-toggle${isSdrRoute ? ' active' : ''}`}
+              onClick={handleSDRClick}
+              title="Módulo SDR"
+            >
+              <Bot className="h-5 w-5" style={{ color: 'var(--amber)' }} />
+              <span className="sidebar-submenu-label">SDR</span>
+              <span className={`sidebar-submenu-chevron${sdrAberto ? ' open' : ''}`}>
+                <ChevronDown className="h-4 w-4" />
+              </span>
+            </button>
+
+            {/* Submenu Children (Always accessible in sidebar) */}
+            <div className={`sidebar-submenu-children${sdrAberto ? ' open' : ''}`}>
+              <div className="sidebar-submenu-children-inner">
+                {sdrSubmenuLinks.map((l) => {
+                  const SubIcon = l.Icon
+                  return (
+                    <NavLink
+                      key={l.to}
+                      to={l.to}
+                      onClick={() => setMenuAberto(false)}
+                      className={({ isActive }) =>
+                        `sidebar-submenu-child${isActive ? ' active' : ''}`
+                      }
+                    >
+                      <SubIcon className="h-4 w-4" />
+                      <span>{l.label}</span>
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
         </nav>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -139,10 +230,18 @@ export default function ClienteLayout() {
               )}
             </div>
 
-            <Outlet context={{ clienteId: id, cliente }} />
+            <Outlet context={{ clienteId: id, cliente, openWizard: () => setWizardAberto(true) }} />
           </>
         )}
       </main>
+
+      {/* 7-Step Onboarding Wizard Modal */}
+      <SDROnboardingWizard
+        isOpen={wizardAberto}
+        onClose={() => setWizardAberto(false)}
+        clienteId={id}
+        onCompleted={handleWizardCompleted}
+      />
     </div>
   )
 }
