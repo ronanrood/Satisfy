@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../supabaseClient'
+<<<<<<< HEAD
 import logo from '../img/logo.png'
 import logoMini from '../img/logo_mini.png'
+=======
+import logo from '../img/LogoSatisfyWhite.svg'
+>>>>>>> 9071fa210afb2348250fc9cbfff8a44f4a11a920
 
 const ICONE_CLIENTES = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

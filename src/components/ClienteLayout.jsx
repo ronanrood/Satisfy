@@ -172,76 +172,76 @@ export default function ClienteLayout() {
             </Link>
           </div>
 
-        <nav className="sidebar-nav">
-          {linksNav.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              onClick={() => setMenuAberto(false)}
-              className={({ isActive }) => (isActive ? 'active' : '')}
-              title={l.label}
-            >
-              {l.icone}
-              <span>{l.label}</span>
-            </NavLink>
-          ))}
+          <nav className="sidebar-nav">
+            {linksNav.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                onClick={() => setMenuAberto(false)}
+                className={({ isActive }) => (isActive ? 'active' : '')}
+                title={l.label}
+              >
+                {l.icone}
+                <span>{l.label}</span>
+              </NavLink>
+            ))}
 
-          {/* SDR Group with Submenu - ALWAYS ACCESSIBLE */}
-          <div className="sidebar-submenu" style={{ marginTop: 6 }}>
-            <button
-              className={`sidebar-submenu-toggle${isSdrRoute ? ' active' : ''}`}
-              onClick={handleSDRClick}
-              title="Módulo SDR"
-              type="button"
-            >
-              <Bot className="h-5 w-5" style={{ color: 'var(--amber)', flexShrink: 0 }} />
-              <span className="sidebar-submenu-label">SDR</span>
-              <span className={`sidebar-submenu-chevron${sdrAberto ? ' open' : ''}`}>
-                <ChevronDown className="h-4 w-4" />
-              </span>
-            </button>
+            {/* SDR Group with Submenu - ALWAYS ACCESSIBLE */}
+            <div className="sidebar-submenu" style={{ marginTop: 6 }}>
+              <button
+                className={`sidebar-submenu-toggle${isSdrRoute ? ' active' : ''}`}
+                onClick={handleSDRClick}
+                title="Módulo SDR"
+                type="button"
+              >
+                <Bot className="h-5 w-5" style={{ color: 'var(--amber)', flexShrink: 0 }} />
+                <span className="sidebar-submenu-label">SDR</span>
+                <span className={`sidebar-submenu-chevron${sdrAberto ? ' open' : ''}`}>
+                  <ChevronDown className="h-4 w-4" />
+                </span>
+              </button>
 
-            {/* Submenu Children (Always accessible in sidebar) */}
-            <div className={`sidebar-submenu-children${sdrAberto ? ' open' : ''}`}>
-              <div className="sidebar-submenu-children-inner">
-                {sdrSubmenuLinks.map((l) => {
-                  const SubIcon = l.Icon
-                  return (
-                    <NavLink
-                      key={l.to}
-                      to={l.to}
-                      onClick={() => setMenuAberto(false)}
-                      className={({ isActive }) =>
-                        `sidebar-submenu-child${isActive ? ' active' : ''}`
-                      }
-                      title={l.label}
-                    >
-                      <SubIcon className="h-4 w-4" />
-                      <span>{l.label}</span>
-                    </NavLink>
-                  )
-                })}
+              {/* Submenu Children (Always accessible in sidebar) */}
+              <div className={`sidebar-submenu-children${sdrAberto ? ' open' : ''}`}>
+                <div className="sidebar-submenu-children-inner">
+                  {sdrSubmenuLinks.map((l) => {
+                    const SubIcon = l.Icon
+                    return (
+                      <NavLink
+                        key={l.to}
+                        to={l.to}
+                        onClick={() => setMenuAberto(false)}
+                        className={({ isActive }) =>
+                          `sidebar-submenu-child${isActive ? ' active' : ''}`
+                        }
+                        title={l.label}
+                      >
+                        <SubIcon className="h-4 w-4" />
+                        <span>{l.label}</span>
+                      </NavLink>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        </nav>
+          </nav>
 
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6, width: '100%', paddingBottom: 6 }}>
-          <Link to="/" className="sidebar-back" style={{ fontSize: 13, color: '#8fa0aa', padding: '8px 10px' }} title="Todos os clientes">
-            ← <span>Todos os clientes</span>
-          </Link>
-          <button
-            className="sidebar-logout"
-            onClick={() => supabase.auth.signOut()}
-            title="Sair da conta"
-            type="button"
-          >
-            {ICONE_SAIR}
-            <span>Sair</span>
-          </button>
-        </div>
-      </aside>
-    </div>
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6, width: '100%', paddingBottom: 6 }}>
+            <Link to="/" className="sidebar-back" style={{ fontSize: 13, color: '#8fa0aa', padding: '8px 10px' }} title="Todos os clientes">
+              ← <span>Todos os clientes</span>
+            </Link>
+            <button
+              className="sidebar-logout"
+              onClick={() => supabase.auth.signOut()}
+              title="Sair da conta"
+              type="button"
+            >
+              {ICONE_SAIR}
+              <span>Sair</span>
+            </button>
+          </div>
+        </aside>
+      </div>
 
       <main className="main">
         <div className="main-content-inner">

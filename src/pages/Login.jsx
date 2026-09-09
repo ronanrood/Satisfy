@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
-import logo from "../img/logo.png";
+import logo from "../img/Logo Satisfy.svg";
 import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle, FiArrowRight } from "react-icons/fi";
 
 export default function Login() {
