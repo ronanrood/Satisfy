@@ -18,8 +18,8 @@ import {
   X,
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import logo from '../img/logo.png'
-import logoMini from '../img/logo_mini.png'
+import logo from '../img/LogoSatisfyWhite.svg'
+import logoMini from '../img/favicon.svg'
 import SDROnboardingWizard from './sdr/SDROnboardingWizard'
 import { sdrService } from '../services/sdrService'
 
