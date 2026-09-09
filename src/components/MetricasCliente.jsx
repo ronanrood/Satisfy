@@ -8,6 +8,17 @@ import {
   FiPrinter, 
   FiUser 
 } from 'react-icons/fi'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts'
 
 const PERIODOS = [
   { valor: '7', label: 'Últimos 7 dias', dias: 7 },
@@ -148,40 +159,114 @@ export default function MetricasCliente({ clienteId }) {
             </div>
           </div>
 
-          {/* Gráficos Lado a Lado: Volume e Evolução */}
+          {/* Gráficos Lado a Lado: Volume e Evolução (Recharts Modernos e Animados) */}
           <div className="charts-double-row">
             <div className="chart-box">
               <h4 className="chart-title">
                 VOLUME DE RESPOSTAS por Dia (Últimos {config?.dias || 30} Dias)
               </h4>
-              <div className="bar-chart-container">
-                {baldes.map((b, idx) => {
-                  const alturaPct = (b.quantidade / maiorVolume) * 85
-                  return (
-                    <div key={idx} className="bar-column">
-                      <div className="bar-track">
-                        <div
-                          className="bar-fill"
-                          style={{ height: `${Math.max(alturaPct, 6)}%` }}
-                          title={`${b.label}: ${b.quantidade} resposta(s)`}
-                        />
-                      </div>
-                      <span className="bar-tick">{b.label}</span>
-                    </div>
-                  )
-                })}
+              <div style={{ height: 160, width: '100%', marginTop: 8 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={baldes} margin={{ top: 8, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis
+                      dataKey="id"
+                      stroke="#94a3b8"
+                      fontSize={11}
+                      tickLine={false}
+                      tickFormatter={(id) => {
+                        const b = baldes.find((item) => item.id === id)
+                        return b ? b.diaSemana : id
+                      }}
+                    />
+                    <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const item = payload[0].payload
+                          return (
+                            <div className="chart-custom-tooltip">
+                              <div className="tooltip-label">{item.dataCompleta || item.label}</div>
+                              <div className="tooltip-value">
+                                <strong>{item.quantidade}</strong> {item.quantidade === 1 ? 'resposta' : 'respostas'}
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                    <Bar
+                      dataKey="quantidade"
+                      name="Respostas"
+                      fill="#2f6f62"
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1100}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
             <div className="chart-box">
-              <h4 className="chart-title">EVOLUÇÃO da Nota MÉDIA</h4>
-              <div className="line-chart-container">
-                <TrendSparkline baldes={baldes} />
-                <div className="chart-axis-labels">
-                  {baldes.map((b, idx) => (
-                    <span key={idx} className="bar-tick">{b.label}</span>
-                  ))}
-                </div>
+              <h4 className="chart-title">EVOLUÇÃO DA NOTA MÉDIA</h4>
+              <div style={{ height: 160, width: '100%', marginTop: 8 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={baldes.map((b) => ({
+                      ...b,
+                      mediaVal: b.media !== null && b.media !== undefined ? Number(Number(b.media).toFixed(1)) : null,
+                    }))}
+                    margin={{ top: 8, right: 10, left: -25, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="metricasAmberGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#e8a33d" stopOpacity={0.28} />
+                        <stop offset="95%" stopColor="#e8a33d" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis
+                      dataKey="id"
+                      stroke="#94a3b8"
+                      fontSize={11}
+                      tickLine={false}
+                      tickFormatter={(id) => {
+                        const b = baldes.find((item) => item.id === id)
+                        return b ? b.diaSemana : id
+                      }}
+                    />
+                    <YAxis domain={[0, 10]} stroke="#94a3b8" fontSize={11} tickLine={false} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length && payload[0].payload.mediaVal !== null) {
+                          const item = payload[0].payload
+                          return (
+                            <div className="chart-custom-tooltip">
+                              <div className="tooltip-label">{item.dataCompleta || item.label}</div>
+                              <div className="tooltip-value">
+                                Nota Média: <strong>★ {item.mediaVal}</strong>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="mediaVal"
+                      name="Nota Média"
+                      stroke="#e8a33d"
+                      strokeWidth={2.5}
+                      fill="url(#metricasAmberGrad)"
+                      dot={{ r: 3, fill: '#ffffff', stroke: '#c17f1f', strokeWidth: 2 }}
+                      activeDot={{ r: 5, fill: '#e8a33d', stroke: '#ffffff', strokeWidth: 2 }}
+                      connectNulls
+                      animationDuration={1300}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -252,14 +337,25 @@ export default function MetricasCliente({ clienteId }) {
 
 function SpeedometerGauge({ value = 0, max = 10, size = 68 }) {
   const safeVal = Number(value) || 0
-  const ratio = Math.max(0, Math.min(safeVal / max, 1))
-  const rotationDeg = -90 + (ratio * 180)
+  const safeMax = Number(max) || 10
+  const ratio = Math.max(0, Math.min(safeVal / safeMax, 1))
+  const targetDeg = -90 + (ratio * 180)
+  const [deg, setDeg] = useState(-90)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDeg(targetDeg)
+    }, 60)
+    return () => clearTimeout(timer)
+  }, [targetDeg])
+
+  const gradId = `gaugeGrad_${String(safeVal).replace(/[^a-zA-Z0-9]/g, '_')}_${safeMax}`
 
   return (
     <div className="speedometer-wrapper" style={{ width: size, height: size * 0.65 }}>
       <svg viewBox="0 0 100 58" className="gauge-svg">
         <defs>
-          <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#ef4444" />
             <stop offset="45%" stopColor="#f59e0b" />
             <stop offset="100%" stopColor="#10b981" />
@@ -275,14 +371,21 @@ function SpeedometerGauge({ value = 0, max = 10, size = 68 }) {
         <path
           d="M 12 50 A 38 38 0 0 1 88 50"
           fill="none"
-          stroke="url(#gaugeGradient)"
+          stroke={`url(#${gradId})`}
           strokeWidth="8"
           strokeLinecap="round"
         />
-        <g transform={`translate(50, 50) rotate(${rotationDeg})`}>
-          <line x1="0" y1="0" x2="0" y2="-32" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="0" cy="0" r="4.5" fill="#334155" />
-          <circle cx="0" cy="0" r="2" fill="#ffffff" />
+        <g
+          style={{
+            transform: `rotate(${deg}deg)`,
+            transformOrigin: '50px 50px',
+            transformBox: 'view-box',
+            transition: 'transform 1.1s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}
+        >
+          <line x1="50" y1="50" x2="50" y2="18" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="50" cy="50" r="4.5" fill="#1e293b" />
+          <circle cx="50" cy="50" r="2" fill="#ffffff" />
         </g>
       </svg>
     </div>
@@ -462,9 +565,17 @@ function calcularVolumeEEvolucao(respostas, diasJanela) {
   for (let i = DIAS_EXIBIR - 1; i >= 0; i--) {
     const data = new Date(hoje)
     data.setDate(hoje.getDate() - i)
+    const diaSemana = data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
+    const diaMes = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    const dataCompleta = `${diaSemana}, ${diaMes}`
+
     baldes.push({
+      id: `${data.toISOString().slice(0, 10)}_${i}`,
       chave: data.toISOString().slice(0, 10),
-      label: data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+      label: diaSemana,
+      diaSemana,
+      diaMes,
+      dataCompleta,
       quantidade: 0,
       somaNotas: 0,
       comNota: 0,

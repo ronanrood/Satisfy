@@ -10,9 +10,16 @@ import {
   Settings,
   Bot,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+  Check,
+  X,
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import logo from '../img/logo.png'
+import logoMini from '../img/logo_mini.png'
 import SDROnboardingWizard from './sdr/SDROnboardingWizard'
 import { sdrService } from '../services/sdrService'
 
@@ -131,17 +138,39 @@ export default function ClienteLayout() {
     setSdrAberto(true)
   }
 
+  const [colapsado, setColapsado] = useState(() => {
+    return localStorage.getItem('satisfy_sidebar_collapsed') === 'true'
+  })
+
+  const toggleSidebar = () => {
+    const proximo = !colapsado
+    setColapsado(proximo)
+    localStorage.setItem('satisfy_sidebar_collapsed', String(proximo))
+  }
+
   return (
-    <div className="shell">
+    <div className={`shell${colapsado ? ' sidebar-is-collapsed' : ''}`}>
       <button className="hamburger-btn" onClick={() => setMenuAberto(true)} aria-label="Abrir menu">☰</button>
       {menuAberto && <div className="sidebar-overlay open" onClick={() => setMenuAberto(false)} />}
 
-      <aside className={`sidebar${menuAberto ? ' open' : ''}`}>
-        <div className="sidebar-logo">
-          <Link to="/">
-            <img src={logo} alt="Satisfy" />
-          </Link>
-        </div>
+      <div className={`sidebar-wrapper${colapsado ? ' collapsed' : ''}${menuAberto ? ' open' : ''}`}>
+        {/* Botão para Recolher / Expandir a barra lateral */}
+        <button
+          className="sidebar-collapse-btn"
+          onClick={toggleSidebar}
+          title={colapsado ? 'Expandir menu' : 'Recolher menu'}
+          type="button"
+          aria-label={colapsado ? 'Expandir menu' : 'Recolher menu'}
+        >
+          {colapsado ? <ChevronRight style={{ width: 14, height: 14 }} /> : <ChevronLeft style={{ width: 14, height: 14 }} />}
+        </button>
+
+        <aside className={`sidebar${colapsado ? ' collapsed' : ''}`}>
+          <div className="sidebar-logo">
+            <Link to="/" title="Satisfy">
+              <img src={colapsado ? logoMini : logo} alt="Satisfy" />
+            </Link>
+          </div>
 
         <nav className="sidebar-nav">
           {linksNav.map((l) => (
@@ -150,8 +179,10 @@ export default function ClienteLayout() {
               to={l.to}
               onClick={() => setMenuAberto(false)}
               className={({ isActive }) => (isActive ? 'active' : '')}
+              title={l.label}
             >
-              {l.icone}{l.label}
+              {l.icone}
+              <span>{l.label}</span>
             </NavLink>
           ))}
 
@@ -161,8 +192,9 @@ export default function ClienteLayout() {
               className={`sidebar-submenu-toggle${isSdrRoute ? ' active' : ''}`}
               onClick={handleSDRClick}
               title="Módulo SDR"
+              type="button"
             >
-              <Bot className="h-5 w-5" style={{ color: 'var(--amber)' }} />
+              <Bot className="h-5 w-5" style={{ color: 'var(--amber)', flexShrink: 0 }} />
               <span className="sidebar-submenu-label">SDR</span>
               <span className={`sidebar-submenu-chevron${sdrAberto ? ' open' : ''}`}>
                 <ChevronDown className="h-4 w-4" />
@@ -182,6 +214,7 @@ export default function ClienteLayout() {
                       className={({ isActive }) =>
                         `sidebar-submenu-child${isActive ? ' active' : ''}`
                       }
+                      title={l.label}
                     >
                       <SubIcon className="h-4 w-4" />
                       <span>{l.label}</span>
@@ -193,46 +226,65 @@ export default function ClienteLayout() {
           </div>
         </nav>
 
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <Link to="/" style={{ fontSize: 13, color: '#8fa0aa', padding: '10px 12px' }}>← Todos os clientes</Link>
-          <button className="sidebar-logout" onClick={() => supabase.auth.signOut()}>{ICONE_SAIR}Sair</button>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6, width: '100%', paddingBottom: 6 }}>
+          <Link to="/" className="sidebar-back" style={{ fontSize: 13, color: '#8fa0aa', padding: '8px 10px' }} title="Todos os clientes">
+            ← <span>Todos os clientes</span>
+          </Link>
+          <button
+            className="sidebar-logout"
+            onClick={() => supabase.auth.signOut()}
+            title="Sair da conta"
+            type="button"
+          >
+            {ICONE_SAIR}
+            <span>Sair</span>
+          </button>
         </div>
       </aside>
+    </div>
 
       <main className="main">
-        {carregando ? (
-          <p className="empty-state">Carregando…</p>
-        ) : !cliente ? (
-          <p className="empty-state">Cliente não encontrado.</p>
-        ) : (
-          <>
-            <div className="page-header">
-              {editando ? (
-                <EdicaoCliente
-                  cliente={cliente}
-                  onCancelar={() => setEditando(false)}
-                  onSalvo={() => {
-                    setEditando(false)
-                    buscarCliente()
-                  }}
-                />
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
-                  <div>
-                    <div className="page-eyebrow">{cliente.plano} · <span className={`pill ${cliente.status}`}>{cliente.status}</span></div>
-                    <h1 className="page-title">{cliente.nome}</h1>
+        <div className="main-content-inner">
+          {carregando ? (
+            <p className="empty-state">Carregando…</p>
+          ) : !cliente ? (
+            <p className="empty-state">Cliente não encontrado.</p>
+          ) : (
+            <>
+              <div className="page-header">
+                {editando ? (
+                  <EdicaoCliente
+                    cliente={cliente}
+                    onCancelar={() => setEditando(false)}
+                    onSalvo={() => {
+                      setEditando(false)
+                      buscarCliente()
+                    }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <div className="page-eyebrow">{cliente.plano} · <span className={`pill ${cliente.status}`}>{cliente.status}</span></div>
+                      <h1 className="page-title">{cliente.nome}</h1>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <button className="btn-ghost" onClick={() => setEditando(true)}>
+                        <Pencil style={{ width: 14, height: 14 }} />
+                        Editar cliente
+                      </button>
+                      <button className="btn-ghost danger" onClick={excluirCliente}>
+                        <Trash2 style={{ width: 14, height: 14 }} />
+                        Excluir cliente
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn-ghost" onClick={() => setEditando(true)}>Editar cliente</button>
-                    <button className="btn-ghost" style={{ color: 'var(--red)' }} onClick={excluirCliente}>Excluir cliente</button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <Outlet context={{ clienteId: id, cliente, openWizard: () => setWizardAberto(true) }} />
-          </>
-        )}
+              <Outlet context={{ clienteId: id, cliente, openWizard: () => setWizardAberto(true) }} />
+            </>
+          )}
+        </div>
       </main>
 
       {/* 7-Step Onboarding Wizard Modal */}
@@ -252,7 +304,8 @@ function EdicaoCliente({ cliente, onCancelar, onSalvo }) {
   const [status, setStatus] = useState(cliente.status)
   const [salvando, setSalvando] = useState(false)
 
-  async function salvar() {
+  async function salvar(e) {
+    if (e) e.preventDefault()
     setSalvando(true)
     await supabase.from('clientes').update({ nome, plano, status }).eq('id', cliente.id)
     setSalvando(false)
@@ -260,33 +313,61 @@ function EdicaoCliente({ cliente, onCancelar, onSalvo }) {
   }
 
   return (
-    <div className="card" style={{ marginBottom: 0 }}>
-      <div className="field">
-        <label htmlFor="editNome">Nome do cliente</label>
-        <input id="editNome" value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
-      </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <div className="field" style={{ flex: '1 1 160px' }}>
-          <label htmlFor="editPlano">Plano</label>
-          <select id="editPlano" value={plano} onChange={(e) => setPlano(e.target.value)}>
+    <form onSubmit={salvar} className="panel-card form-card-box" style={{ marginBottom: 24 }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 700, color: 'var(--ink)' }}>
+        Editar Dados do Cliente
+      </h3>
+
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
+        <div className="form-field" style={{ flex: '2 1 260px' }}>
+          <label htmlFor="editNome">Nome da Empresa</label>
+          <input
+            id="editNome"
+            className="text-input"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            required
+            autoFocus
+          />
+        </div>
+        <div className="form-field" style={{ flex: '1 1 140px' }}>
+          <label htmlFor="editPlano">Plano de Licença</label>
+          <select
+            id="editPlano"
+            className="text-input"
+            value={plano}
+            onChange={(e) => setPlano(e.target.value)}
+          >
             <option value="trial">Trial</option>
             <option value="basico">Básico</option>
             <option value="pro">Pro</option>
           </select>
         </div>
-        <div className="field" style={{ flex: '1 1 160px' }}>
-          <label htmlFor="editStatus">Status</label>
-          <select id="editStatus" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <div className="form-field" style={{ flex: '1 1 140px' }}>
+          <label htmlFor="editStatus">Status da Conta</label>
+          <select
+            id="editStatus"
+            className="text-input"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
             <option value="ativo">Ativo</option>
             <option value="suspenso">Suspenso</option>
             <option value="cancelado">Cancelado</option>
           </select>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>
-        <button className="btn-ghost" onClick={onCancelar}>Cancelar</button>
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <button className="btn-action-primary" type="submit" disabled={salvando}>
+          <Check style={{ width: 14, height: 14 }} />
+          {salvando ? 'Salvando…' : 'Salvar Alterações'}
+        </button>
+        <button className="btn-ghost" type="button" onClick={onCancelar}>
+          <X style={{ width: 14, height: 14 }} />
+          Cancelar
+        </button>
       </div>
-    </div>
+    </form>
   )
 }

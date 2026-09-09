@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import logo from '../img/logo.png'
+import logoMini from '../img/logo_mini.png'
 
 const ICONE_CLIENTES = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -22,33 +24,70 @@ const ICONE_SAIR = (
 
 export default function Layout({ children }) {
   const [menuAberto, setMenuAberto] = useState(false)
+  const [colapsado, setColapsado] = useState(() => {
+    return localStorage.getItem('satisfy_sidebar_collapsed') === 'true'
+  })
+
+  const toggleSidebar = () => {
+    const proximo = !colapsado
+    setColapsado(proximo)
+    localStorage.setItem('satisfy_sidebar_collapsed', String(proximo))
+  }
 
   return (
-    <div className="shell">
+    <div className={`shell${colapsado ? ' sidebar-is-collapsed' : ''}`}>
       <button className="hamburger-btn" onClick={() => setMenuAberto(true)} aria-label="Abrir menu">☰</button>
       {menuAberto && <div className="sidebar-overlay open" onClick={() => setMenuAberto(false)} />}
 
-      <aside className={`sidebar${menuAberto ? ' open' : ''}`}>
-        <div className="sidebar-logo">
-          <Link to="/">
-            <img src={logo} alt="Satisfy" />
-          </Link>
-        </div>
+      <div className={`sidebar-wrapper${colapsado ? ' collapsed' : ''}${menuAberto ? ' open' : ''}`}>
+        {/* Botão para Recolher / Expandir a barra lateral */}
+        <button
+          className="sidebar-collapse-btn"
+          onClick={toggleSidebar}
+          title={colapsado ? 'Expandir menu' : 'Recolher menu'}
+          type="button"
+          aria-label={colapsado ? 'Expandir menu' : 'Recolher menu'}
+        >
+          {colapsado ? <ChevronRight style={{ width: 14, height: 14 }} /> : <ChevronLeft style={{ width: 14, height: 14 }} />}
+        </button>
 
-        <nav className="sidebar-nav">
-          <NavLink to="/" end onClick={() => setMenuAberto(false)} className={({ isActive }) => (isActive ? 'active' : '')}>
-            {ICONE_CLIENTES}Clientes
-          </NavLink>
-        </nav>
+        <aside className={`sidebar${colapsado ? ' collapsed' : ''}`}>
+          <div className="sidebar-logo">
+            <Link to="/" title="Satisfy">
+              <img src={colapsado ? logoMini : logo} alt="Satisfy" />
+            </Link>
+          </div>
 
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <button className="sidebar-logout" onClick={() => supabase.auth.signOut()}>{ICONE_SAIR}Sair</button>
-        </div>
+          <nav className="sidebar-nav">
+            <NavLink
+              to="/"
+              end
+              onClick={() => setMenuAberto(false)}
+              className={({ isActive }) => (isActive ? 'active' : '')}
+              title="Clientes"
+            >
+              {ICONE_CLIENTES}
+              <span>Clientes</span>
+            </NavLink>
+          </nav>
 
-        <div className="sidebar-footer">Painel Mestre</div>
-      </aside>
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4, width: '100%', paddingBottom: 6 }}>
+            <button
+              className="sidebar-logout"
+              onClick={() => supabase.auth.signOut()}
+              title="Sair da conta"
+              type="button"
+            >
+              {ICONE_SAIR}
+              <span>Sair</span>
+            </button>
+          </div>
+        </aside>
+      </div>
 
-      <main className="main">{children}</main>
+      <main className="main">
+        <div className="main-content-inner">{children}</div>
+      </main>
     </div>
   )
 }

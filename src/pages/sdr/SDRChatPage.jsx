@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
   FiSend,
@@ -20,6 +20,7 @@ export default function SDRChatPage() {
   const [activeConvId, setActiveConvId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [inputText, setInputText] = useState('')
+  const messagesEndRef = useRef(null)
 
   useEffect(() => {
     if (clienteId) {
@@ -32,6 +33,10 @@ export default function SDRChatPage() {
   }, [clienteId])
 
   const activeConv = conversations.find((c) => c.id === activeConvId) || conversations[0]
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [activeConv?.messages])
 
   const handleSendMessage = (e) => {
     e.preventDefault()
@@ -204,6 +209,7 @@ export default function SDRChatPage() {
                     <div className="sdr-bubble-time">{msg.time}</div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
 
               <form onSubmit={handleSendMessage} className="sdr-chat-input-area">

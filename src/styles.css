@@ -40,21 +40,140 @@ a {
   min-height: 100vh;
 }
 
-.sidebar {
+.sidebar-wrapper {
   position: fixed;
   top: 0;
   left: 0;
   width: 240px;
   height: 100vh;
+  z-index: 30;
+  overflow: visible;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-wrapper.collapsed {
+  width: 72px;
+}
+
+.sidebar {
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--ink);
   color: #fff;
   padding: 28px 18px;
   display: flex;
   flex-direction: column;
   gap: 28px;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 30;
+  box-sizing: border-box;
+  transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Sidebar Recolhida / Retrátil */
+.sidebar.collapsed {
+  padding: 28px 10px;
+}
+
+.sidebar.collapsed .sidebar-logo {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidebar.collapsed .sidebar-logo img {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+}
+
+.sidebar.collapsed .sidebar-nav {
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-nav a,
+.sidebar.collapsed .sidebar-submenu-toggle {
+  justify-content: center;
+  padding: 11px 0;
+  gap: 0;
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-nav a span,
+.sidebar.collapsed .sidebar-submenu-label,
+.sidebar.collapsed .sidebar-submenu-chevron,
+.sidebar.collapsed .sidebar-submenu-children {
+  display: none !important;
+}
+
+.sidebar.collapsed .sidebar-logout {
+  justify-content: center;
+  padding: 11px 0;
+  gap: 0;
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-logout span {
+  display: none !important;
+}
+
+.sidebar.collapsed .sidebar-back span {
+  display: none !important;
+}
+
+.sidebar.collapsed .sidebar-back {
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* Botão para Recolher / Expandir Sidebar */
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 24px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: var(--amber);
+  transform: scale(1.1);
+}
+
+.sidebar-footer {
+  display: none !important;
 }
 
 .sidebar-logo {
@@ -193,9 +312,36 @@ a {
 .main {
   flex: 1;
   margin-left: 240px;
-  padding: 40px 48px;
-  max-width: 1040px;
+  width: calc(100% - 240px);
+  min-height: 100vh;
+  padding: 36px 40px;
+  box-sizing: border-box;
+  transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar-is-collapsed .main {
+  margin-left: 72px !important;
+  width: calc(100% - 72px) !important;
+}
+
+.main-content-inner {
   width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+/* Fallback: caso algum componente seja filho direto de .main */
+.main > :not(.main-content-inner) {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
   box-sizing: border-box;
 }
 
@@ -203,7 +349,6 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-left: 240px;
   padding: 18px 48px;
   border-bottom: 1px solid var(--line);
   background: #fff;
@@ -212,10 +357,18 @@ a {
 }
 
 .client-main {
-  margin-left: 240px;
-  padding: 32px 48px;
-  max-width: 1040px;
   width: 100%;
+  min-height: 100vh;
+  padding: 32px 48px;
+  box-sizing: border-box;
+}
+
+.client-main .main-content-inner,
+.client-main > * {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
   box-sizing: border-box;
 }
 
@@ -316,13 +469,43 @@ a {
 }
 
 .btn-ghost {
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper-raised, #ffffff);
   color: var(--ink-soft);
   border: 1px solid var(--line);
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
 }
 
 .btn-ghost:hover {
-  background: var(--paper);
+  background: var(--paper, #f4f6f8);
+  border-color: #cbd5e1;
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.btn-ghost:active {
+  transform: translateY(0);
+}
+
+.btn-ghost.danger {
+  color: var(--red, #c85c4a);
+  border-color: rgba(200, 92, 74, 0.3);
+}
+
+.btn-ghost.danger:hover {
+  background: #fef2f2;
+  border-color: var(--red, #c85c4a);
+  color: #dc2626;
 }
 
 .empty-state {
@@ -756,7 +939,9 @@ a {
   }
 
   /* 2. Oculta tudo que não for o conteúdo principal */
+  .sidebar-wrapper,
   .sidebar,
+  .sidebar-collapse-btn,
   .sidebar-overlay,
   .hamburger-btn,
   .client-header,
@@ -878,17 +1063,24 @@ a {
     cursor: pointer;
   }
 
+  .sidebar-wrapper,
   .sidebar {
     transform: translateX(-100%);
   }
 
+  .sidebar-wrapper.open,
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .sidebar-collapse-btn {
+    display: none !important;
   }
 
   .main,
   .client-main {
     margin-left: 0 !important;
+    width: 100% !important;
     padding: 70px 16px 30px !important;
   }
 
@@ -1100,6 +1292,70 @@ a {
   align-items: center;
   gap: 4px;
   margin-top: 4px;
+}
+
+/* Botão Abrir Painel Elegante e Evidentemente Clicável */
+.btn-open-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #f0fdf4;
+  color: #059669;
+  border: 1px solid #bbf7d0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.08);
+}
+
+.btn-open-panel:hover {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.28);
+}
+
+.btn-open-panel:active {
+  transform: translateY(0);
+}
+
+.btn-open-panel .sublink-icon {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.btn-open-panel:hover .sublink-icon {
+  transform: translate(1px, -1px);
+}
+
+/* Tooltip customizado para gráficos recharts */
+.chart-custom-tooltip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.09);
+  font-size: 12px;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.chart-custom-tooltip .tooltip-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.chart-custom-tooltip .tooltip-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .badge-plan {
@@ -2215,7 +2471,7 @@ button {
 }
 
 .sidebar-submenu-children.open {
-  max-height: 300px;
+  max-height: 480px;
   opacity: 1;
 }
 

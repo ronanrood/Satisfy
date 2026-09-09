@@ -198,9 +198,18 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
     <tr className="data-row clickable" onClick={onAbrir}>
       <td className="cell-primary">
         <div className="client-name">{cliente.nome}</div>
-        <div className="client-sublink">
-          <FiExternalLink className="sublink-icon" /> Abrir painel
-        </div>
+        <button
+          type="button"
+          className="btn-open-panel"
+          onClick={(e) => {
+            e.stopPropagation()
+            onAbrir()
+          }}
+          title={`Abrir painel de ${cliente.nome}`}
+        >
+          <span>Abrir painel</span>
+          <FiExternalLink className="sublink-icon" />
+        </button>
       </td>
       <td>
         <span className="badge-plan">{cliente.plano || 'trial'}</span>
