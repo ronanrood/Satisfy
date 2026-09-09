@@ -12,7 +12,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
-import logo from '../img/Logo Satisfy.svg'
+import logo from '../img/LogoSatisfyWhite.svg'
 import SDROnboardingWizard from './sdr/SDROnboardingWizard'
 import { sdrService } from '../services/sdrService'
 
