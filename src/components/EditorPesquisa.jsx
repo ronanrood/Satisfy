@@ -14,7 +14,9 @@ import {
   FiList, 
   FiSmartphone,
   FiUploadCloud,
-  FiRefreshCw
+  FiRefreshCw,
+  FiUsers,
+  FiUser
 } from 'react-icons/fi'
 
 const TIPOS_PERGUNTA = [
@@ -23,12 +25,14 @@ const TIPOS_PERGUNTA = [
   { id: 'carinhas', label: 'Carinhas / Emojis', icon: <FiSmile /> },
   { id: 'nota', label: 'Comentário (Texto)', icon: <FiType /> },
   { id: 'escolha_unica', label: 'Múltipla Escolha', icon: <FiList /> },
+  { id: 'atendente', label: 'Atendente / Equipe (5 Cards)', icon: <FiUsers /> },
 ]
 
 export default function EditorPesquisa({ clienteId }) {
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [enviandoImagem, setEnviandoImagem] = useState(false)
+  const [uploadingFuncionario, setUploadingFuncionario] = useState(null)
   const [bannerUrl, setBannerUrl] = useState('')
   const [textoBotao, setTextoBotao] = useState('Toque para avaliar')
   const [fraseAbertura, setFraseAbertura] = useState('Como foi sua experiência hoje?')
@@ -82,7 +86,7 @@ export default function EditorPesquisa({ clienteId }) {
     setSalvando(true)
 
     try {
-      // 1. Apenas colunas que REALMENTE existem na tabela 'pesquisas'
+      // 1. Salva as perguntas na tabela 'pesquisas'
       const payloadPesquisa = {
         cliente_id: clienteId,
         nome: nomePesquisa,
@@ -143,7 +147,7 @@ export default function EditorPesquisa({ clienteId }) {
         if (errInsertConf) throw errInsertConf
       }
 
-      alert('Pesquisa e banners salvos com sucesso!')
+      alert('Pesquisa e configurações salvas com sucesso!')
     } catch (err) {
       console.error('Erro ao salvar:', err)
       alert(`Erro: ${err.message || 'Falha ao salvar'}`)
@@ -152,7 +156,7 @@ export default function EditorPesquisa({ clienteId }) {
     }
   }
 
-  // Upload direto para o bucket do Supabase Storage
+  // Upload para o banner
   async function handleUploadBanner(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -160,26 +164,48 @@ export default function EditorPesquisa({ clienteId }) {
     try {
       setEnviandoImagem(true)
       const fileExt = file.name.split('.').pop()
-      const fileName = `${clienteId}-${Date.now()}.${fileExt}`
+      const fileName = `${clienteId}-banner-${Date.now()}.${fileExt}`
       const filePath = `banners/${fileName}`
 
-      // Envia para o bucket 'banners' (crie o bucket público no Supabase caso ainda não exista)
       const { error: uploadError } = await supabase.storage
         .from('banners')
         .upload(filePath, file, { upsert: true })
 
-      if (uploadError) {
-        throw uploadError
-      }
+      if (uploadError) throw uploadError
 
-      // Obtém a URL pública gerada
       const { data } = supabase.storage.from('banners').getPublicUrl(filePath)
       setBannerUrl(data.publicUrl)
     } catch (err) {
-      alert('Erro ao enviar imagem. Verifique se o bucket "banners" está criado no Supabase ou use o campo de URL abaixo.')
+      alert('Erro ao enviar imagem. Verifique o bucket "banners" no Supabase.')
       console.error(err)
     } finally {
       setEnviandoImagem(false)
+    }
+  }
+
+  // Upload individual da foto do funcionário
+  async function handleUploadFotoFuncionario(file, pIdx, fIdx) {
+    if (!file) return
+
+    try {
+      setUploadingFuncionario(`${pIdx}-${fIdx}`)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${clienteId}-funcionario-${Date.now()}.${fileExt}`
+      const filePath = `banners/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('banners')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('banners').getPublicUrl(filePath)
+      atualizarFuncionario(pIdx, fIdx, 'foto', data.publicUrl)
+    } catch (err) {
+      alert('Erro ao enviar foto do funcionário.')
+      console.error(err)
+    } finally {
+      setUploadingFuncionario(null)
     }
   }
 
@@ -189,6 +215,13 @@ export default function EditorPesquisa({ clienteId }) {
       texto: 'Qual é seu grau de satisfação?',
       tipo: 'nps',
       opcoes: ['Ótimo', 'Regular', 'Ruim'],
+      funcionarios: [
+        { id: '1', nome: 'Atendente 1', foto: '' },
+        { id: '2', nome: 'Atendente 2', foto: '' },
+        { id: '3', nome: 'Atendente 3', foto: '' },
+        { id: '4', nome: 'Atendente 4', foto: '' },
+        { id: '5', nome: 'Atendente 5', foto: '' },
+      ]
     }
     setPerguntas([...perguntas, nova])
   }
@@ -208,40 +241,29 @@ export default function EditorPesquisa({ clienteId }) {
 
   const atualizarPergunta = (index, campo, valor) => {
     const lista = [...perguntas]
-    lista[index] = { ...lista[index], [campo]: valor }
+    const item = { ...lista[index], [campo]: valor }
+
+    // Se mudar para o tipo 'atendente' e ainda não tiver os 5 slots inicializados
+    if (campo === 'tipo' && valor === 'atendente' && (!item.funcionarios || item.funcionarios.length === 0)) {
+      item.funcionarios = [
+        { id: '1', nome: '', foto: '' },
+        { id: '2', nome: '', foto: '' },
+        { id: '3', nome: '', foto: '' },
+        { id: '4', nome: '', foto: '' },
+        { id: '5', nome: '', foto: '' },
+      ]
+    }
+
+    lista[index] = item
     setPerguntas(lista)
   }
 
-  async function salvarPesquisa(e) {
-    e?.preventDefault()
-    setSalvando(true)
-
-    const payload = {
-      cliente_id: clienteId,
-      nome: nomePesquisa,
-      banner_url: bannerUrl,
-      texto_botao: textoBotao,
-      frase_abertura: fraseAbertura,
-      cor_primaria: corPrimaria,
-      perguntas,
-      ativa: true,
-    }
-
-    const { data: existente } = await supabase
-      .from('pesquisas')
-      .select('id')
-      .eq('cliente_id', clienteId)
-      .eq('ativa', true)
-      .maybeSingle()
-
-    if (existente?.id) {
-      await supabase.from('pesquisas').update(payload).eq('id', existente.id)
-    } else {
-      await supabase.from('pesquisas').insert(payload)
-    }
-
-    setSalvando(false)
-    alert('Pesquisa e banners salvos com sucesso!')
+  const atualizarFuncionario = (pIdx, fIdx, campo, valor) => {
+    const lista = [...perguntas]
+    const funcs = [...(lista[pIdx].funcionarios || [])]
+    funcs[fIdx] = { ...funcs[fIdx], [campo]: valor }
+    lista[pIdx] = { ...lista[pIdx], funcionarios: funcs }
+    setPerguntas(lista)
   }
 
   if (carregando) {
@@ -296,7 +318,7 @@ export default function EditorPesquisa({ clienteId }) {
                     <FiUploadCloud className="upload-icon" />
                     <div className="upload-text-group">
                       <strong>Clique para escolher uma imagem</strong>
-                      <span>PNG, JPG ou WEBP recomendados (resolução padrão de totem)</span>
+                      <span>PNG, JPG ou WEBP recomendados</span>
                     </div>
                   </div>
                 )}
@@ -416,7 +438,7 @@ export default function EditorPesquisa({ clienteId }) {
                     <input
                       className="text-input"
                       value={p.texto}
-                      placeholder="Digite o enunciado da pergunta..."
+                      placeholder="Ex: Quem atendeu você hoje?"
                       onChange={(e) => atualizarPergunta(idx, 'texto', e.target.value)}
                     />
                   </div>
@@ -437,6 +459,89 @@ export default function EditorPesquisa({ clienteId }) {
                       ))}
                     </div>
                   </div>
+
+                  {/* Configuração de Atendentes (5 Cards) */}
+                  {p.tipo === 'atendente' && (
+                    <div style={{ marginTop: 16, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 10 }}>
+                        Configurar Atendentes (Fotos e Nomes)
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+                        {(p.funcionarios || [0, 1, 2, 3, 4]).map((func, fIdx) => {
+                          const item = typeof func === 'object' ? func : { id: String(fIdx + 1), nome: '', foto: '' }
+                          const isUploading = uploadingFuncionario === `${idx}-${fIdx}`
+                          return (
+                            <div 
+                              key={fIdx} 
+                              style={{ 
+                                background: '#f8fafc', 
+                                border: '1px solid #e2e8f0', 
+                                borderRadius: 8, 
+                                padding: 8, 
+                                textAlign: 'center',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 6
+                              }}
+                            >
+                              <div 
+                                style={{ 
+                                  width: 60, 
+                                  height: 60, 
+                                  borderRadius: '50%', 
+                                  background: '#e2e8f0', 
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  position: 'relative',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => document.getElementById(`file-input-${idx}-${fIdx}`)?.click()}
+                              >
+                                {item.foto ? (
+                                  <img src={item.foto} alt="Funcionario" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <FiUser style={{ fontSize: 24, color: '#94a3b8' }} />
+                                )}
+
+                                {isUploading && (
+                                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <FiRefreshCw className="spin-icon" style={{ color: '#fff' }} />
+                                  </div>
+                                )}
+                              </div>
+
+                              <input 
+                                id={`file-input-${idx}-${fIdx}`}
+                                type="file" 
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => handleUploadFotoFuncionario(e.target.files?.[0], idx, fIdx)}
+                              />
+
+                              <button
+                                type="button"
+                                style={{ fontSize: 10, background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer' }}
+                                onClick={() => document.getElementById(`file-input-${idx}-${fIdx}`)?.click()}
+                              >
+                                {item.foto ? 'Trocar Foto' : '+ Foto'}
+                              </button>
+
+                              <input
+                                className="text-input"
+                                style={{ fontSize: 11, padding: '4px 6px', textAlign: 'center' }}
+                                placeholder={`Nome ${fIdx + 1}`}
+                                value={item.nome || ''}
+                                onChange={(e) => atualizarFuncionario(idx, fIdx, 'nome', e.target.value)}
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {p.tipo === 'escolha_unica' && (
                     <div className="form-field" style={{ marginTop: 12 }}>
@@ -525,7 +630,7 @@ export default function EditorPesquisa({ clienteId }) {
             ) : (
               <div className="preview-question-content" style={{ width: '100%' }}>
                 <span className="preview-tag">Pergunta {etapaPreview} de {perguntas.length}</span>
-                <h4 style={{ margin: '12px 0 20px 0', fontSize: 14, color: '#0f172a' }}>
+                <h4 style={{ margin: '12px 0 16px 0', fontSize: 14, color: '#0f172a' }}>
                   {perguntas[etapaPreview - 1]?.texto}
                 </h4>
 
@@ -563,11 +668,42 @@ export default function EditorPesquisa({ clienteId }) {
                   />
                 )}
 
-                {perguntas[etapaPreview - 1]?.tipo === 'escolha_unica' && (
+                {perguntas[pIdx]?.tipo === 'escolha_unica' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
                     {(perguntas[etapaPreview - 1]?.opcoes || []).map((op, i) => (
                       <div key={i} className="preview-option-chip">
                         {op}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Preview dos Cards de Atendentes */}
+                {perguntas[etapaPreview - 1]?.tipo === 'atendente' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))', gap: 8, width: '100%' }}>
+                    {(perguntas[etapaPreview - 1]?.funcionarios || []).map((func, i) => (
+                      <div 
+                        key={i} 
+                        style={{ 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: 8, 
+                          padding: 6, 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center',
+                          background: '#fff'
+                        }}
+                      >
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#e2e8f0', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {func.foto ? (
+                            <img src={func.foto} alt={func.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <FiUser style={{ fontSize: 16, color: '#94a3b8' }} />
+                          )}
+                        </div>
+                        <span style={{ fontSize: 9, fontWeight: 600, color: '#1e293b', marginTop: 4, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                          {func.nome || `Atend. ${i + 1}`}
+                        </span>
                       </div>
                     ))}
                   </div>
