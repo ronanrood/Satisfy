@@ -6,7 +6,9 @@ import {
   FiStar, 
   FiDownload, 
   FiPrinter, 
-  FiUser 
+  FiUser,
+  FiChevronDown,
+  FiPhone
 } from 'react-icons/fi'
 import {
   ResponsiveContainer,
@@ -36,6 +38,26 @@ export default function MetricasCliente({ clienteId }) {
   const [respostas, setRespostas] = useState([])
   const [perguntas, setPerguntas] = useState([])
   const [periodo, setPeriodo] = useState('30')
+  const [recentesAberto, setRecentesAberto] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('satisfy_metricas_recentes_aberto')
+      return salvo !== null ? JSON.parse(salvo) : true
+    } catch {
+      return true
+    }
+  })
+
+  const alternarRecentes = () => {
+    setRecentesAberto((prev) => {
+      const novo = !prev
+      try {
+        localStorage.setItem('satisfy_metricas_recentes_aberto', JSON.stringify(novo))
+      } catch {
+        // ignore
+      }
+      return novo
+    })
+  }
 
   useEffect(() => {
     buscar()
@@ -76,7 +98,7 @@ export default function MetricasCliente({ clienteId }) {
   const total = respostas.length
   const comNota = respostas.filter((r) => r.nota !== null)
   const media = comNota.length ? comNota.reduce((soma, r) => soma + r.nota, 0) / comNota.length : null
-  const recentes = respostas.slice(0, 8)
+  const recentes = respostas.slice(0, 50)
 
   const porUnidade = calcularPorUnidade(respostas)
   const porPergunta = calcularPorPergunta(respostas, perguntas)
@@ -283,46 +305,138 @@ export default function MetricasCliente({ clienteId }) {
             </div>
           )}
 
-          {/* Tabela de Respostas Recentes */}
-          <div className="recent-section">
-            <h4 className="section-title">RESPOSTAS RECENTES</h4>
-            <div className="table-styled-container">
-              <table className="clean-table">
-                <thead>
-                  <tr>
-                    <th>QUANDO</th>
-                    <th>UNIDADE</th>
-                    <th>SCORE</th>
-                    <th>COMMENTARY</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentes.map((r) => (
-                    <tr key={r.id}>
-                      <td className="cell-date">{formatarData(r.created_at)}</td>
-                      <td className="cell-unit">
-                        <div className="avatar-chip">
-                          <FiUser className="avatar-icon" />
-                        </div>
-                        <span>{r.totens?.unidades?.nome || 'Locarti'}</span>
-                      </td>
-                      <td>
-                        <ScoreIndicator score={r.nota} />
-                      </td>
-                      <td className="cell-comment">
-                        {r.comentario ? (
-                          <div className="comment-content">
-                            <span>{r.comentario}</span>
-                            <FiMessageSquare className="comment-bubble-icon" />
-                          </div>
-                        ) : (
-                          <span className="no-comment">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Caixa Retrátil de Respostas Recentes */}
+          <div className={`recent-section recent-box-container ${recentesAberto ? 'is-open' : 'is-closed'}`}>
+            <div
+              className="recent-box-header"
+              onClick={alternarRecentes}
+              role="button"
+              tabIndex={0}
+              aria-expanded={recentesAberto}
+              aria-controls="recent-responses-body"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  alternarRecentes()
+                }
+              }}
+            >
+              <div className="recent-box-header-left">
+                <div className="recent-box-icon-bubble">
+                  <FiMessageSquare />
+                </div>
+                <h4 className="recent-box-title">RESPOSTAS RECENTES</h4>
+                {recentes.length > 0 && (
+                  <span className="recent-count-pill">
+                    {respostas.length > 50
+                      ? `50 mais recentes (de ${respostas.length})`
+                      : `${recentes.length} ${recentes.length === 1 ? 'resposta' : 'respostas'}`}
+                  </span>
+                )}
+              </div>
+
+              <div className="recent-box-header-right">
+                <span className="recent-box-toggle-label metricas-ocultar-impressao">
+                  {recentesAberto ? 'Recolher' : 'Expandir'}
+                </span>
+                <span
+                  className={`recent-box-toggle-btn ${recentesAberto ? 'open' : ''} metricas-ocultar-impressao`}
+                  aria-hidden="true"
+                >
+                  <FiChevronDown />
+                </span>
+              </div>
+            </div>
+
+            <div
+              id="recent-responses-body"
+              className={`recent-box-body ${recentesAberto ? 'expanded' : 'collapsed'}`}
+            >
+              <div className="table-styled-container">
+                {recentes.length === 0 ? (
+                  <div className="recent-empty-message">
+                    Nenhuma resposta recente encontrada para o período selecionado.
+                  </div>
+                ) : (
+                  <table className="clean-table">
+                    <thead>
+                      <tr>
+                        <th>QUANDO</th>
+                        <th>NOME</th>
+                        <th>TELEFONE</th>
+                        <th>UNIDADE</th>
+                        <th>NOTA</th>
+                        <th>COMENTÁRIO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentes.map((r) => {
+                        const contato = extrairContato(r)
+                        const telLimpo = (contato.telefone || '').replace(/\D/g, '')
+                        const linkWhats = telLimpo.length >= 10 ? `https://wa.me/55${telLimpo}` : null
+
+                        return (
+                          <tr key={r.id}>
+                            <td className="cell-date">{formatarData(r.created_at)}</td>
+                            <td className="cell-client-name">
+                              {contato.nome ? (
+                                <div className="client-chip-wrap">
+                                  <div className="avatar-chip client-avatar">
+                                    <FiUser className="avatar-icon" />
+                                  </div>
+                                  <span className="client-name-bold">{contato.nome}</span>
+                                </div>
+                              ) : (
+                                <span className="no-comment">—</span>
+                              )}
+                            </td>
+                            <td className="cell-phone">
+                              {contato.telefone ? (
+                                <div className="phone-contact-group">
+                                  <FiPhone className="phone-tiny-icon" />
+                                  <span>{contato.telefone}</span>
+                                  {linkWhats && (
+                                    <a
+                                      href={linkWhats}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="whatsapp-quick-link"
+                                      title="Conversar no WhatsApp"
+                                    >
+                                      WhatsApp
+                                    </a>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="no-comment">—</span>
+                              )}
+                            </td>
+                            <td className="cell-unit">
+                              <div className="avatar-chip">
+                                <FiHome className="avatar-icon" />
+                              </div>
+                              <span>{r.totens?.unidades?.nome || 'Locarti'}</span>
+                            </td>
+                            <td>
+                              <ScoreIndicator score={r.nota} />
+                            </td>
+                            <td className="cell-comment">
+                              {r.comentario ? (
+                                <div className="comment-content">
+                                  <span>{r.comentario}</span>
+                                  <FiMessageSquare className="comment-bubble-icon" />
+                                </div>
+                              ) : (
+                                <span className="no-comment">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -607,14 +721,36 @@ function formatarData(iso) {
   })
 }
 
+function extrairContato(r) {
+  let nome = r.nome || ''
+  let telefone = r.telefone || ''
+
+  if ((!nome || !telefone) && Array.isArray(r.respostas_detalhe)) {
+    const itemContato = r.respostas_detalhe.find(
+      (item) => item.tipo === 'contato' || (item.resposta && typeof item.resposta === 'object' && (item.resposta.nome || item.resposta.telefone))
+    )
+    if (itemContato?.resposta && typeof itemContato.resposta === 'object') {
+      if (!nome) nome = itemContato.resposta.nome || ''
+      if (!telefone) telefone = itemContato.resposta.telefone || ''
+    }
+  }
+
+  return { nome: (nome || '').trim(), telefone: (telefone || '').trim() }
+}
+
 function exportarCSV(respostas) {
-  const cabecalho = ['Data', 'Unidade', 'Nota', 'Comentário']
-  const linhas = respostas.map((r) => [
-    formatarData(r.created_at),
-    r.totens?.unidades?.nome || 'Locarti',
-    r.nota ?? '',
-    (r.comentario || '').replace(/"/g, '""'),
-  ])
+  const cabecalho = ['Data', 'Nome', 'Telefone', 'Unidade', 'Nota', 'Comentário']
+  const linhas = respostas.map((r) => {
+    const contato = extrairContato(r)
+    return [
+      formatarData(r.created_at),
+      contato.nome || '',
+      contato.telefone || '',
+      r.totens?.unidades?.nome || 'Locarti',
+      r.nota ?? '',
+      (r.comentario || '').replace(/"/g, '""'),
+    ]
+  })
 
   const csv = [cabecalho, ...linhas]
     .map((linha) => linha.map((v) => `"${v}"`).join(','))

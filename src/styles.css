@@ -915,6 +915,225 @@ a {
   color: #cbd5e1;
 }
 
+.client-chip-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-chip.client-avatar {
+  background: rgba(6, 182, 212, 0.12);
+  color: #0891b2;
+}
+
+.client-name-bold {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 12px;
+}
+
+.phone-contact-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.phone-tiny-icon {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.whatsapp-quick-link {
+  display: inline-flex;
+  align-items: center;
+  background: #25d366;
+  color: #ffffff !important;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.whatsapp-quick-link:hover {
+  background: #1eb857;
+  transform: translateY(-1px);
+}
+
+/* Caixa Retrátil de Respostas Recentes */
+.recent-section.recent-box-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 12px;
+}
+
+.recent-section.recent-box-container:hover {
+  border-color: #cbd5e1;
+}
+
+.recent-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  background: #f8fafc;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.recent-box-header:hover {
+  background: #f1f5f9;
+}
+
+.recent-box-header:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -2px;
+}
+
+.recent-box-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recent-box-icon-bubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(232, 163, 61, 0.14);
+  color: var(--amber-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.recent-box-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.05em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.recent-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+
+.recent-box-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recent-box-toggle-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.recent-box-header:hover .recent-box-toggle-label {
+  color: #1e293b;
+}
+
+.recent-box-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 16px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+}
+
+.recent-box-toggle-btn.open {
+  transform: rotate(180deg);
+}
+
+.recent-box-header:hover .recent-box-toggle-btn {
+  color: #1e293b;
+}
+
+.recent-box-body {
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.recent-box-body.collapsed {
+  display: none;
+}
+
+.recent-box-body .table-styled-container {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.recent-box-body .table-styled-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.recent-box-body .table-styled-container::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.recent-box-body .table-styled-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.recent-box-body .table-styled-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.recent-box-body .clean-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 2;
+  box-shadow: 0 1px 0 #e2e8f0;
+}
+
+.recent-box-body .clean-table th,
+.recent-box-body .clean-table td {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.recent-box-body .clean-table tr:last-child td {
+  border-bottom: none;
+}
+
+.recent-empty-message {
+  padding: 24px 18px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
 /* ========================================================
    REGRAS DE IMPRESSÃO E PDF (CORREÇÃO TOTAL)
    ======================================================== */
@@ -1024,6 +1243,33 @@ a {
     page-break-inside: auto !important;
   }
 
+  .recent-section.recent-box-container {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    margin-top: 15px !important;
+  }
+
+  .recent-box-header {
+    background: #f8fafc !important;
+    padding: 10px 14px !important;
+  }
+
+  .recent-box-header-right {
+    display: none !important;
+  }
+
+  .recent-box-body .table-styled-container {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .recent-box-body .clean-table thead th {
+    position: static !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
   .clean-table {
     page-break-inside: auto !important;
   }
@@ -1035,8 +1281,12 @@ a {
 
   .clean-table th,
   .clean-table td {
-    padding: 8px !important;
+    padding: 8px 12px !important;
     font-size: 11px !important;
+  }
+
+  .whatsapp-quick-link {
+    display: none !important;
   }
 }
 

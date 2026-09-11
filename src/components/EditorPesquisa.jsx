@@ -16,7 +16,8 @@ import {
   FiUploadCloud,
   FiRefreshCw,
   FiUsers,
-  FiUser
+  FiUser,
+  FiPhone
 } from 'react-icons/fi'
 
 const TIPOS_PERGUNTA = [
@@ -25,6 +26,7 @@ const TIPOS_PERGUNTA = [
   { id: 'carinhas', label: 'Carinhas / Emojis', icon: <FiSmile /> },
   { id: 'nota', label: 'Comentário (Texto)', icon: <FiType /> },
   { id: 'escolha_unica', label: 'Múltipla Escolha', icon: <FiList /> },
+  { id: 'contato', label: 'Contato (Nome & Telefone)', icon: <FiPhone /> },
   { id: 'atendente', label: 'Atendente / Equipe (5 Cards)', icon: <FiUsers /> },
 ]
 
@@ -252,6 +254,13 @@ export default function EditorPesquisa({ clienteId }) {
         { id: '4', nome: '', foto: '' },
         { id: '5', nome: '', foto: '' },
       ]
+    }
+
+    // Se mudar para o tipo 'contato' e estiver com texto genérico de satisfação
+    if (campo === 'tipo' && valor === 'contato') {
+      if (!item.texto || item.texto === 'Qual é seu grau de satisfação?') {
+        item.texto = 'Deixe seu Nome e WhatsApp para contato'
+      }
     }
 
     lista[index] = item
@@ -560,6 +569,17 @@ export default function EditorPesquisa({ clienteId }) {
                       />
                     </div>
                   )}
+
+                  {p.tipo === 'contato' && (
+                    <div style={{ marginTop: 12, padding: '12px 14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#15803d', fontWeight: 600, fontSize: 12 }}>
+                        <FiPhone /> Captura de Lead (Nome & WhatsApp)
+                      </div>
+                      <p style={{ margin: '6px 0 0 0', fontSize: 12, color: '#166534', lineHeight: 1.4 }}>
+                        Esta tela solicita o <strong>Nome Completo</strong> e <strong>WhatsApp com DDD</strong> do cliente. As informações serão salvas no Banco de Dados, exibidas nas <strong>Pesquisas Recentes</strong> do Dashboard e enviadas para o módulo <strong>SDR</strong> para tratamento.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -668,13 +688,52 @@ export default function EditorPesquisa({ clienteId }) {
                   />
                 )}
 
-                {perguntas[pIdx]?.tipo === 'escolha_unica' && (
+                {perguntas[etapaPreview - 1]?.tipo === 'escolha_unica' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
                     {(perguntas[etapaPreview - 1]?.opcoes || []).map((op, i) => (
                       <div key={i} className="preview-option-chip">
                         {op}
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {perguntas[etapaPreview - 1]?.tipo === 'contato' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                    <div style={{ textAlign: 'left' }}>
+                      <label style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Nome Completo</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Maria Oliveira"
+                        disabled
+                        style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid #cbd5e1', padding: '0 8px', fontSize: 11, background: '#f8fafc', marginTop: 3 }}
+                      />
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <label style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>WhatsApp / Telefone</label>
+                      <input
+                        type="text"
+                        placeholder="(00) 00000-0000"
+                        disabled
+                        style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid #cbd5e1', padding: '0 8px', fontSize: 11, background: '#f8fafc', marginTop: 3 }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      <button
+                        type="button"
+                        disabled
+                        style={{ flex: 1, height: 28, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: 10, fontWeight: 600 }}
+                      >
+                        Pular
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        style={{ flex: 2, height: 28, borderRadius: 6, border: 'none', background: corPrimaria, color: '#fff', fontSize: 10, fontWeight: 600 }}
+                      >
+                        Continuar
+                      </button>
+                    </div>
                   </div>
                 )}
 

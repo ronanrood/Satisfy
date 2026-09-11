@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { sdrService } from '../services/sdrService'
 
 const ETAPAS = {
   CARREGANDO: 'carregando',
@@ -25,6 +26,7 @@ export default function Totem() {
   const [respostas, setRespostas] = useState([])
   const [textoAtual, setTextoAtual] = useState('')
   const [selecoesAtuais, setSelecoesAtuais] = useState([])
+  const [contatoAtual, setContatoAtual] = useState({ nome: '', telefone: '' })
   const [mensagemFinal, setMensagemFinal] = useState(null)
   const [enviando, setEnviando] = useState(false)
 
@@ -82,6 +84,7 @@ export default function Totem() {
     setRespostas([])
     setTextoAtual('')
     setSelecoesAtuais([])
+    setContatoAtual({ nome: '', telefone: '' })
     setMensagemFinal(null)
     setEtapa(ETAPAS.BANNER)
   }, [])
@@ -100,19 +103,30 @@ export default function Totem() {
     if (etapa === ETAPAS.PERGUNTA && perguntaAtual) {
       const respAnterior = respostas.find((r) => r.pergunta_id === perguntaAtual.id)
       if (respAnterior) {
-        if (Array.isArray(respAnterior.resposta)) {
+        if (perguntaAtual.tipo === 'contato' && typeof respAnterior.resposta === 'object' && respAnterior.resposta) {
+          setContatoAtual({
+            nome: respAnterior.resposta.nome || '',
+            telefone: respAnterior.resposta.telefone || '',
+          })
+          setTextoAtual('')
+          setSelecoesAtuais([])
+        } else if (Array.isArray(respAnterior.resposta)) {
           setSelecoesAtuais(respAnterior.resposta)
           setTextoAtual('')
+          setContatoAtual({ nome: '', telefone: '' })
         } else if (typeof respAnterior.resposta === 'string') {
           setTextoAtual(respAnterior.resposta)
           setSelecoesAtuais([])
+          setContatoAtual({ nome: '', telefone: '' })
         } else {
           setTextoAtual('')
           setSelecoesAtuais([])
+          setContatoAtual({ nome: '', telefone: '' })
         }
       } else {
         setTextoAtual('')
         setSelecoesAtuais([])
+        setContatoAtual({ nome: '', telefone: '' })
       }
     }
   }, [indice, etapa, perguntaAtual])
@@ -169,13 +183,62 @@ export default function Totem() {
       .map((r) => r.resposta.trim())
       .join(' | ')
 
-    await supabase.from('respostas').insert({
+    // Procura resposta de contato
+    const respContato = todasRespostas.find(
+      (r) => r.tipo === 'contato' && r.resposta && typeof r.resposta === 'object'
+    )
+    const nomeContato = respContato?.resposta?.nome?.trim() || null
+    const telefoneContato = respContato?.resposta?.telefone?.trim() || null
+
+    const basePayload = {
       totem_id: totem.id,
       pesquisa_id: pesquisa?.id,
       nota: primeiraNota ? primeiraNota.resposta : null,
       comentario: textosCombinados || null,
       respostas_detalhe: todasRespostas,
-    })
+    }
+
+    try {
+      // Tenta gravar com nome e telefone caso as colunas existam na tabela respostas
+      let insertResult = await supabase.from('respostas').insert({
+        ...basePayload,
+        ...(nomeContato ? { nome: nomeContato } : {}),
+        ...(telefoneContato ? { telefone: telefoneContato } : {}),
+      })
+
+      // Se a coluna ainda não existir no banco, tenta sem as colunas extras
+      if (insertResult.error && (insertResult.error.message?.includes('column') || insertResult.error.code === 'PGRST204')) {
+        await supabase.from('respostas').insert(basePayload)
+      }
+    } catch (err) {
+      console.warn('Fallback insert respostas:', err)
+      await supabase.from('respostas').insert(basePayload)
+    }
+
+    // Integração com SDR: salva o lead na base de contatos para tratamento comercial
+    if ((nomeContato || telefoneContato) && totem?.unidades?.cliente_id) {
+      try {
+        const clienteId = totem.unidades.cliente_id
+        const contatosAtuais = sdrService.getContacts(clienteId)
+        const novoContatoSdr = {
+          id: `lead-totem-${Date.now()}`,
+          name: nomeContato || 'Cliente Totem',
+          company: totem.unidades?.nome || 'Totem Presencial',
+          phone: telefoneContato || '',
+          email: '',
+          status: 'Novo Lead Totem',
+          stage: 'Novo Lead',
+          deals_count: 1,
+          last_interaction: 'Agora mesmo',
+          created_at: new Date().toISOString(),
+          nota: primeiraNota ? primeiraNota.resposta : null,
+          comentario: textosCombinados || null,
+        }
+        sdrService.saveContacts(clienteId, [novoContatoSdr, ...contatosAtuais])
+      } catch (errSdr) {
+        console.warn('Erro ao registrar no SDR local:', errSdr)
+      }
+    }
 
     setEnviando(false)
     setEtapa(ETAPAS.OBRIGADO)
@@ -279,6 +342,8 @@ export default function Totem() {
                 setTextoAtual={setTextoAtual}
                 selecoesAtuais={selecoesAtuais}
                 setSelecoesAtuais={setSelecoesAtuais}
+                contatoAtual={contatoAtual}
+                setContatoAtual={setContatoAtual}
                 enviando={enviando}
                 onResponder={responderEAvancar}
               />
@@ -323,6 +388,8 @@ function TelaPergunta({
   setTextoAtual,
   selecoesAtuais,
   setSelecoesAtuais,
+  contatoAtual,
+  setContatoAtual,
   enviando,
   onResponder,
 }) {
@@ -566,6 +633,119 @@ function TelaPergunta({
           </button>
         </div>
       )}
+
+      {tipo === 'contato' && (
+        <div style={{ width: '100%', maxWidth: 520, margin: '0 auto', textAlign: 'left' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 8 }}>
+                Seu Nome Completo
+              </label>
+              <input
+                type="text"
+                value={contatoAtual?.nome || ''}
+                onChange={(e) => setContatoAtual((prev) => ({ ...prev, nome: e.target.value }))}
+                placeholder="Ex: Carlos Eduardo"
+                style={{
+                  width: '100%',
+                  padding: '16px 18px',
+                  borderRadius: 14,
+                  border: '2px solid #cbd5e1',
+                  fontSize: 18,
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  background: '#fff',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = corPrimaria)}
+                onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 8 }}>
+                WhatsApp / Telefone com DDD
+              </label>
+              <input
+                type="tel"
+                value={contatoAtual?.telefone || ''}
+                onChange={(e) => {
+                  const val = formatarTelefoneInput(e.target.value)
+                  setContatoAtual((prev) => ({ ...prev, telefone: val }))
+                }}
+                placeholder="(00) 00000-0000"
+                style={{
+                  width: '100%',
+                  padding: '16px 18px',
+                  borderRadius: 14,
+                  border: '2px solid #cbd5e1',
+                  fontSize: 18,
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  background: '#fff',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = corPrimaria)}
+                onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 14, marginTop: 26 }}>
+            <button
+              type="button"
+              style={{
+                flex: 1,
+                padding: '16px 0',
+                borderRadius: 14,
+                border: '1px solid #cbd5e1',
+                background: '#fff',
+                color: '#64748b',
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              onClick={() => onResponder({ nome: '', telefone: '' })}
+              disabled={enviando}
+            >
+              Pular
+            </button>
+            <button
+              type="button"
+              style={{
+                flex: 2,
+                padding: '16px 0',
+                borderRadius: 14,
+                border: 'none',
+                background: corPrimaria,
+                color: '#fff',
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              onClick={() => {
+                onResponder({
+                  nome: (contatoAtual?.nome || '').trim(),
+                  telefone: (contatoAtual?.telefone || '').trim(),
+                })
+              }}
+              disabled={enviando}
+            >
+              {enviando ? 'Enviando…' : 'Continuar'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function formatarTelefoneInput(valor) {
+  const digits = (valor || '').replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 2) return digits.length ? `(${digits}` : ''
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`
 }
