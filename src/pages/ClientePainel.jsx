@@ -50,6 +50,18 @@ export default function ClientePainel({ perfil }) {
         <div className="card">
           <MetricasCliente clienteId={perfil.cliente_id} />
         </div>
+
+        <footer style={{ marginTop: 32, marginBottom: 16, textAlign: 'center', fontSize: 11, color: '#94a3b8' }}>
+          Desenvolvido por{' '}
+          <a
+            href="https://www.nuvdev.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 500 }}
+          >
+            Nuvdev
+          </a>
+        </footer>
       </main>
 
       <ModalPrivacidadeLGPD

@@ -75,7 +75,7 @@ export default function Layout({ children }) {
           </nav>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4, width: '100%', paddingBottom: 6 }}>
-            
+
             <p
               className="sidebar-privacy-link"
               onClick={() => setModalLgpdAberto(true)}
@@ -92,6 +92,7 @@ export default function Layout({ children }) {
               <ShieldCheck style={{ width: 14, height: 14 }} className="sidebar-privacy-icon" />
               <span>Privacidade & LGPD</span>
             </p>
+
             <button
               className="sidebar-logout"
               onClick={() => supabase.auth.signOut()}
@@ -101,6 +102,18 @@ export default function Layout({ children }) {
               {ICONE_SAIR}
               <span>Sair</span>
             </button>
+
+            <div className="sidebar-dev-credit">
+              <span>Desenvolvido por </span>
+              <a
+                href="https://www.nuvdev.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Visitar www.nuvdev.com"
+              >
+                Nuvdev
+              </a>
+            </div>
           </div>
         </aside>
       </div>

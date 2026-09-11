@@ -336,6 +336,35 @@ a {
   display: none;
 }
 
+/* Crédito de desenvolvimento sutil no rodapé da sidebar */
+.sidebar-dev-credit {
+  font-size: 11px;
+  color: #64748b;
+  padding: 4px 12px 2px 12px;
+  margin-top: 2px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.sidebar-dev-credit a {
+  color: #94a3b8;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.18s ease, text-decoration 0.18s ease;
+}
+
+.sidebar-dev-credit a:hover {
+  color: #38bdf8;
+  text-decoration: underline;
+}
+
+.sidebar.collapsed .sidebar-dev-credit {
+  display: none;
+}
+
 .hamburger-btn {
   display: none;
 }

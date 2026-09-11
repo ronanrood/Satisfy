@@ -738,6 +738,104 @@ function TelaPergunta({
           </div>
         </div>
       )}
+
+      {tipo === 'atendente' && (
+        <div style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: 16,
+              justifyContent: 'center',
+            }}
+          >
+            {(pergunta.funcionarios || []).map((func, fIdx) => {
+              const item = typeof func === 'object' ? func : { id: String(fIdx + 1), nome: '', foto: '' }
+              const marcado =
+                (typeof respostaPrevia === 'object' && (respostaPrevia?.id === item.id || respostaPrevia?.nome === item.nome)) ||
+                respostaPrevia === item.nome
+
+              return (
+                <button
+                  key={item.id || fIdx}
+                  type="button"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px 14px',
+                    borderRadius: 18,
+                    border: marcado ? `3px solid ${corPrimaria}` : '2px solid #e2e8f0',
+                    backgroundColor: marcado ? '#f0f9ff' : '#ffffff',
+                    transform: marcado ? 'scale(1.05)' : 'none',
+                    boxShadow: marcado
+                      ? '0 8px 24px rgba(2, 132, 199, 0.18)'
+                      : '0 2px 8px rgba(0, 0, 0, 0.04)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    outline: 'none',
+                  }}
+                  onClick={() => onResponder({ id: item.id, nome: item.nome || `Atendente ${fIdx + 1}` })}
+                >
+                  <div
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: '50%',
+                      background: '#f1f5f9',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 12,
+                      border: `2px solid ${marcado ? corPrimaria : '#cbd5e1'}`,
+                    }}
+                  >
+                    {item.foto ? (
+                      <img
+                        src={item.foto}
+                        alt={item.nome || 'Atendente'}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 30, color: '#94a3b8' }}>👤</span>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: marcado ? corPrimaria : '#1e293b',
+                      textAlign: 'center',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {item.nome || `Atendente ${fIdx + 1}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div style={{ marginTop: 24, textAlign: 'center' }}>
+            <button
+              type="button"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                fontSize: 14,
+                cursor: 'pointer',
+                padding: '8px 16px',
+              }}
+              onClick={() => onResponder('')}
+            >
+              Pular esta etapa
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

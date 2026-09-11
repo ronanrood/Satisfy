@@ -27,7 +27,7 @@ const TIPOS_PERGUNTA = [
   { id: 'nota', label: 'Comentário (Texto)', icon: <FiType /> },
   { id: 'escolha_unica', label: 'Múltipla Escolha', icon: <FiList /> },
   { id: 'contato', label: 'Contato (Nome & Telefone)', icon: <FiPhone /> },
-  { id: 'atendente', label: 'Atendente / Equipe (5 Cards)', icon: <FiUsers /> },
+  { id: 'atendente', label: 'Atendente / Equipe', icon: <FiUsers /> },
 ]
 
 export default function EditorPesquisa({ clienteId }) {
@@ -218,12 +218,9 @@ export default function EditorPesquisa({ clienteId }) {
       tipo: 'nps',
       opcoes: ['Ótimo', 'Regular', 'Ruim'],
       funcionarios: [
-        { id: '1', nome: 'Atendente 1', foto: '' },
-        { id: '2', nome: 'Atendente 2', foto: '' },
-        { id: '3', nome: 'Atendente 3', foto: '' },
-        { id: '4', nome: 'Atendente 4', foto: '' },
-        { id: '5', nome: 'Atendente 5', foto: '' },
-      ]
+        { id: '1', nome: '', foto: '' },
+        { id: '2', nome: '', foto: '' },
+      ],
     }
     setPerguntas([...perguntas, nova])
   }
@@ -245,15 +242,17 @@ export default function EditorPesquisa({ clienteId }) {
     const lista = [...perguntas]
     const item = { ...lista[index], [campo]: valor }
 
-    // Se mudar para o tipo 'atendente' e ainda não tiver os 5 slots inicializados
-    if (campo === 'tipo' && valor === 'atendente' && (!item.funcionarios || item.funcionarios.length === 0)) {
-      item.funcionarios = [
-        { id: '1', nome: '', foto: '' },
-        { id: '2', nome: '', foto: '' },
-        { id: '3', nome: '', foto: '' },
-        { id: '4', nome: '', foto: '' },
-        { id: '5', nome: '', foto: '' },
-      ]
+    // Se mudar para o tipo 'atendente' e ainda não tiver cards inicializados
+    if (campo === 'tipo' && valor === 'atendente') {
+      if (!item.funcionarios || item.funcionarios.length === 0) {
+        item.funcionarios = [
+          { id: crypto.randomUUID ? crypto.randomUUID() : '1', nome: '', foto: '' },
+          { id: crypto.randomUUID ? crypto.randomUUID() : '2', nome: '', foto: '' },
+        ]
+      }
+      if (!item.texto || item.texto === 'Qual é seu grau de satisfação?') {
+        item.texto = 'Quem atendeu você hoje?'
+      }
     }
 
     // Se mudar para o tipo 'contato' e estiver com texto genérico de satisfação
@@ -264,6 +263,27 @@ export default function EditorPesquisa({ clienteId }) {
     }
 
     lista[index] = item
+    setPerguntas(lista)
+  }
+
+  const adicionarFuncionario = (pIdx) => {
+    const lista = [...perguntas]
+    const funcs = [...(lista[pIdx].funcionarios || [])]
+    const novoId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
+    funcs.push({ id: novoId, nome: '', foto: '' })
+    lista[pIdx] = { ...lista[pIdx], funcionarios: funcs }
+    setPerguntas(lista)
+  }
+
+  const removerFuncionario = (pIdx, fIdx) => {
+    const lista = [...perguntas]
+    const funcs = [...(lista[pIdx].funcionarios || [])]
+    if (funcs.length <= 1) {
+      alert('É necessário manter pelo menos 1 card de atendente.')
+      return
+    }
+    funcs.splice(fIdx, 1)
+    lista[pIdx] = { ...lista[pIdx], funcionarios: funcs }
     setPerguntas(lista)
   }
 
@@ -469,54 +489,108 @@ export default function EditorPesquisa({ clienteId }) {
                     </div>
                   </div>
 
-                  {/* Configuração de Atendentes (5 Cards) */}
+                  {/* Configuração de Atendentes */}
                   {p.tipo === 'atendente' && (
-                    <div style={{ marginTop: 16, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 10 }}>
-                        Configurar Atendentes (Fotos e Nomes)
-                      </label>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-                        {(p.funcionarios || [0, 1, 2, 3, 4]).map((func, fIdx) => {
+                    <div style={{ marginTop: 16, borderTop: '1px solid #f1f5f9', paddingTop: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 13, fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <FiUsers style={{ color: '#0284c7' }} />
+                            Cards de Atendentes
+                            <span style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>
+                              {(p.funcionarios || []).length} {(p.funcionarios || []).length === 1 ? 'card' : 'cards'}
+                            </span>
+                          </label>
+                          <span style={{ fontSize: 11, color: '#64748b', display: 'block', marginTop: 2 }}>
+                            Clique no card vazio com o símbolo + para adicionar novos atendentes.
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: 12 }}>
+                        {(p.funcionarios || []).map((func, fIdx) => {
                           const item = typeof func === 'object' ? func : { id: String(fIdx + 1), nome: '', foto: '' }
                           const isUploading = uploadingFuncionario === `${idx}-${fIdx}`
+                          const totalCards = (p.funcionarios || []).length
+
                           return (
                             <div 
-                              key={fIdx} 
+                              key={item.id || fIdx} 
                               style={{ 
-                                background: '#f8fafc', 
+                                background: '#ffffff', 
                                 border: '1px solid #e2e8f0', 
-                                borderRadius: 8, 
-                                padding: 8, 
+                                borderRadius: 12, 
+                                padding: '12px 8px 10px 8px', 
                                 textAlign: 'center',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: 6
+                                gap: 6,
+                                position: 'relative',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                                transition: 'transform 0.15s, box-shadow 0.15s',
                               }}
                             >
+                              {totalCards > 1 && (
+                                <button
+                                  type="button"
+                                  title="Excluir este card"
+                                  onClick={() => removerFuncionario(idx, fIdx)}
+                                  style={{
+                                    position: 'absolute',
+                                    top: 6,
+                                    right: 6,
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderRadius: 4,
+                                    width: 22,
+                                    height: 22,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#94a3b8',
+                                    cursor: 'pointer',
+                                    transition: 'color 0.15s, background 0.15s',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = '#ef4444'
+                                    e.currentTarget.style.background = '#fee2e2'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = '#94a3b8'
+                                    e.currentTarget.style.background = 'transparent'
+                                  }}
+                                >
+                                  <FiTrash2 size={13} />
+                                </button>
+                              )}
+
                               <div 
                                 style={{ 
-                                  width: 60, 
-                                  height: 60, 
+                                  width: 58, 
+                                  height: 58, 
                                   borderRadius: '50%', 
-                                  background: '#e2e8f0', 
-                                  overflow: 'hidden',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  position: 'relative',
-                                  cursor: 'pointer'
+                                  background: '#f1f5f9', 
+                                  border: '2px solid #e2e8f0',
+                                  overflow: 'hidden', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  position: 'relative', 
+                                  cursor: 'pointer',
+                                  marginTop: 4
                                 }}
                                 onClick={() => document.getElementById(`file-input-${idx}-${fIdx}`)?.click()}
+                                title="Clique para enviar/trocar foto"
                               >
                                 {item.foto ? (
-                                  <img src={item.foto} alt="Funcionario" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <img src={item.foto} alt={item.nome || 'Atendente'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
                                   <FiUser style={{ fontSize: 24, color: '#94a3b8' }} />
                                 )}
 
                                 {isUploading && (
-                                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <FiRefreshCw className="spin-icon" style={{ color: '#fff' }} />
                                   </div>
                                 )}
@@ -525,22 +599,22 @@ export default function EditorPesquisa({ clienteId }) {
                               <input 
                                 id={`file-input-${idx}-${fIdx}`}
                                 type="file" 
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={(e) => handleUploadFotoFuncionario(e.target.files?.[0], idx, fIdx)}
+                                accept="image/*" 
+                                style={{ display: 'none' }} 
+                                onChange={(e) => handleUploadFotoFuncionario(e.target.files?.[0], idx, fIdx)} 
                               />
 
                               <button
                                 type="button"
-                                style={{ fontSize: 10, background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer' }}
+                                style={{ fontSize: 10, fontWeight: 600, background: 'transparent', border: 'none', color: '#0284c7', cursor: 'pointer', padding: '2px 4px' }}
                                 onClick={() => document.getElementById(`file-input-${idx}-${fIdx}`)?.click()}
                               >
-                                {item.foto ? 'Trocar Foto' : '+ Foto'}
+                                {item.foto ? 'Trocar Foto' : '+ Adicionar Foto'}
                               </button>
 
                               <input
                                 className="text-input"
-                                style={{ fontSize: 11, padding: '4px 6px', textAlign: 'center' }}
+                                style={{ fontSize: 11, padding: '5px 6px', textAlign: 'center', width: '100%', borderRadius: 6, boxSizing: 'border-box' }}
                                 placeholder={`Nome ${fIdx + 1}`}
                                 value={item.nome || ''}
                                 onChange={(e) => atualizarFuncionario(idx, fIdx, 'nome', e.target.value)}
@@ -548,6 +622,71 @@ export default function EditorPesquisa({ clienteId }) {
                             </div>
                           )
                         })}
+
+                        {/* Botão de Card Vazio que ao clicar cria outro card */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => adicionarFuncionario(idx)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              adicionarFuncionario(idx)
+                            }
+                          }}
+                          title="Clique para adicionar mais um card de atendente"
+                          style={{
+                            border: '2px dashed #93c5fd',
+                            background: '#f8fafc',
+                            borderRadius: 12,
+                            padding: '14px 10px',
+                            minHeight: 140,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                            cursor: 'pointer',
+                            transition: 'all 0.18s ease',
+                            userSelect: 'none',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#0284c7'
+                            e.currentTarget.style.background = '#f0f9ff'
+                            e.currentTarget.style.transform = 'translateY(-2px)'
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(2, 132, 199, 0.12)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#93c5fd'
+                            e.currentTarget.style.background = '#f8fafc'
+                            e.currentTarget.style.transform = 'none'
+                            e.currentTarget.style.boxShadow = 'none'
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: '50%',
+                              background: '#0284c7',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffffff',
+                              boxShadow: '0 3px 8px rgba(2, 132, 199, 0.3)',
+                            }}
+                          >
+                            <FiPlus size={22} strokeWidth={2.5} />
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1' }}>
+                              Adicionar Card
+                            </div>
+                            <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
+                              Novo atendente
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

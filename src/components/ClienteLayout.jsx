@@ -232,15 +232,6 @@ export default function ClienteLayout() {
             <Link to="/" className="sidebar-back" style={{ fontSize: 13, color: '#8fa0aa', padding: '8px 10px' }} title="Todos os clientes">
               ← <span>Todos os clientes</span>
             </Link>
-            <button
-              className="sidebar-logout"
-              onClick={() => supabase.auth.signOut()}
-              title="Sair da conta"
-              type="button"
-            >
-              {ICONE_SAIR}
-              <span>Sair</span>
-            </button>
             <p
               className="sidebar-privacy-link"
               onClick={() => setModalLgpdAberto(true)}
@@ -257,6 +248,28 @@ export default function ClienteLayout() {
               <ShieldCheck style={{ width: 14, height: 14 }} className="sidebar-privacy-icon" />
               <span>Privacidade & LGPD</span>
             </p>
+
+            <button
+              className="sidebar-logout"
+              onClick={() => supabase.auth.signOut()}
+              title="Sair da conta"
+              type="button"
+            >
+              {ICONE_SAIR}
+              <span>Sair</span>
+            </button>
+
+            <div className="sidebar-dev-credit">
+              <span>Desenvolvido por </span>
+              <a
+                href="https://www.nuvdev.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Visitar www.nuvdev.com"
+              >
+                Nuvdev
+              </a>
+            </div>
           </div>
         </aside>
       </div>
