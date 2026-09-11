@@ -16,6 +16,7 @@ import SDREquipePage from './pages/sdr/SDREquipePage'
 import SDRConfiguracoesPage from './pages/sdr/SDRConfiguracoesPage'
 import Totem from './pages/Totem'
 import ClientePainel from './pages/ClientePainel'
+import PrivacidadePage from './pages/PrivacidadePage'
 
 export default function App() {
   const { session, perfil, carregando } = useAuth()
@@ -26,6 +27,15 @@ export default function App() {
     return (
       <Routes>
         <Route path="/totem/:token" element={<Totem />} />
+      </Routes>
+    )
+  }
+
+  // A política de privacidade também é de acesso público irrestrito
+  if (location.pathname === '/privacidade') {
+    return (
+      <Routes>
+        <Route path="/privacidade" element={<PrivacidadePage />} />
       </Routes>
     )
   }
@@ -71,6 +81,7 @@ export default function App() {
         <Route path="pesquisas" element={<ClientePesquisasPage />} />
         <Route path="unidades" element={<ClienteUnidadesPage />} />
         <Route path="dispositivos" element={<ClienteDispositivosPage />} />
+        <Route path="privacidade" element={<PrivacidadePage />} />
         {/* SDR Routes (Lovable CRM module) */}
         <Route path="sdr" element={<Navigate to="sdr/dashboard" replace />} />
         <Route path="sdr/dashboard" element={<SDRDashboardPage />} />

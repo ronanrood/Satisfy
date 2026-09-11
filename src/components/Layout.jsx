@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { NavLink, Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import logo from '../img/LogoSatisfyWhite.svg'
 import logoMini from '../img/favicon.svg'
+import ModalPrivacidadeLGPD from './ModalPrivacidadeLGPD'
 
 const ICONE_CLIENTES = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -23,7 +24,9 @@ const ICONE_SAIR = (
 )
 
 export default function Layout({ children }) {
+  const navigate = useNavigate()
   const [menuAberto, setMenuAberto] = useState(false)
+  const [modalLgpdAberto, setModalLgpdAberto] = useState(false)
   const [colapsado, setColapsado] = useState(() => {
     return localStorage.getItem('satisfy_sidebar_collapsed') === 'true'
   })
@@ -72,6 +75,23 @@ export default function Layout({ children }) {
           </nav>
 
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4, width: '100%', paddingBottom: 6 }}>
+            
+            <p
+              className="sidebar-privacy-link"
+              onClick={() => setModalLgpdAberto(true)}
+              title="Privacidade & LGPD"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setModalLgpdAberto(true)
+                }
+              }}
+            >
+              <ShieldCheck style={{ width: 14, height: 14 }} className="sidebar-privacy-icon" />
+              <span>Privacidade & LGPD</span>
+            </p>
             <button
               className="sidebar-logout"
               onClick={() => supabase.auth.signOut()}
@@ -88,6 +108,13 @@ export default function Layout({ children }) {
       <main className="main">
         <div className="main-content-inner">{children}</div>
       </main>
+
+      {/* Modal Resumo de Privacidade & LGPD */}
+      <ModalPrivacidadeLGPD
+        aberto={modalLgpdAberto}
+        onClose={() => setModalLgpdAberto(false)}
+        onVerMais={() => navigate('/privacidade')}
+      />
     </div>
   )
 }

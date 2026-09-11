@@ -21,6 +21,7 @@ import { supabase } from '../supabaseClient'
 import logo from '../img/LogoSatisfyWhite.svg'
 import logoMini from '../img/favicon.svg'
 import SDROnboardingWizard from './sdr/SDROnboardingWizard'
+import ModalPrivacidadeLGPD from './ModalPrivacidadeLGPD'
 import { sdrService } from '../services/sdrService'
 
 const ICONES = {
@@ -71,6 +72,7 @@ export default function ClienteLayout() {
   const [editando, setEditando] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [wizardAberto, setWizardAberto] = useState(false)
+  const [modalLgpdAberto, setModalLgpdAberto] = useState(false)
   const [sdrConfigurado, setSdrConfigurado] = useState(false)
 
   // Auto-expand SDR submenu if current route is under sdr
@@ -239,6 +241,22 @@ export default function ClienteLayout() {
               {ICONE_SAIR}
               <span>Sair</span>
             </button>
+            <p
+              className="sidebar-privacy-link"
+              onClick={() => setModalLgpdAberto(true)}
+              title="Privacidade & LGPD"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setModalLgpdAberto(true)
+                }
+              }}
+            >
+              <ShieldCheck style={{ width: 14, height: 14 }} className="sidebar-privacy-icon" />
+              <span>Privacidade & LGPD</span>
+            </p>
           </div>
         </aside>
       </div>
@@ -293,6 +311,13 @@ export default function ClienteLayout() {
         onClose={() => setWizardAberto(false)}
         clienteId={id}
         onCompleted={handleWizardCompleted}
+      />
+
+      {/* Modal Resumo de Privacidade & LGPD */}
+      <ModalPrivacidadeLGPD
+        aberto={modalLgpdAberto}
+        onClose={() => setModalLgpdAberto(false)}
+        onVerMais={() => navigate(`/clientes/${id}/privacidade`)}
       />
     </div>
   )
