@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import Layout from '../components/Layout'
-import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiExternalLink, FiUsers } from 'react-icons/fi'
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiExternalLink, FiUsers, FiMail } from 'react-icons/fi'
 
 export default function Dashboard() {
   const [clientes, setClientes] = useState([])
@@ -101,6 +101,7 @@ export default function Dashboard() {
                 <th>NOME</th>
                 <th>PLANO</th>
                 <th>STATUS</th>
+                <th>RELATÓRIO SEMANAL</th>
                 <th style={{ textAlign: 'right', paddingRight: '20px' }}>AÇÕES</th>
               </tr>
             </thead>
@@ -126,13 +127,36 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
   const [nome, setNome] = useState(cliente.nome)
   const [plano, setPlano] = useState(cliente.plano || 'trial')
   const [status, setStatus] = useState(cliente.status || 'ativo')
+  const [emailRelatorio, setEmailRelatorio] = useState(cliente.email_relatorio || '')
+  const [receberRelatorioSemanal, setReceberRelatorioSemanal] = useState(cliente.receber_relatorio_semanal !== false)
   const [salvando, setSalvando] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
 
   async function salvar(e) {
     e.stopPropagation()
     setSalvando(true)
-    await supabase.from('clientes').update({ nome, plano, status }).eq('id', cliente.id)
+    const payload = {
+      nome: nome.trim(),
+      plano,
+      status,
+      email_relatorio: emailRelatorio.trim() || null,
+      receber_relatorio_semanal: Boolean(receberRelatorioSemanal),
+    }
+
+    let { error } = await supabase.from('clientes').update(payload).eq('id', cliente.id)
+
+    // Tratamento caso a coluna ainda não exista no Supabase
+    if (error && error.code === 'PGRST204') {
+      const fallback = await supabase.from('clientes').update({ nome: nome.trim(), plano, status }).eq('id', cliente.id)
+      if (!fallback.error) {
+        alert('Dados básicos atualizados!\n\nNota: Para persistir o e-mail de relatório semanal, execute o script "supabase_migration_relatorios.sql" no SQL Editor do Supabase.')
+        setSalvando(false)
+        setEditando(false)
+        onMudou()
+        return
+      }
+    }
+
     setSalvando(false)
     setEditando(false)
     onMudou()
@@ -182,6 +206,26 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
             <option value="cancelado">Cancelado</option>
           </select>
         </td>
+        <td>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <input
+              type="email"
+              className="input-inline"
+              placeholder="E-mail de relatório..."
+              value={emailRelatorio}
+              onChange={(e) => setEmailRelatorio(e.target.value)}
+              style={{ fontSize: 12 }}
+            />
+            <label style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={receberRelatorioSemanal}
+                onChange={(e) => setReceberRelatorioSemanal(e.target.checked)}
+              />
+              Envio 1x/semana
+            </label>
+          </div>
+        </td>
         <td className="actions-cell">
           <button className="btn-sm btn-save" onClick={salvar} disabled={salvando}>
             {salvando ? 'Salvando...' : 'Salvar'}
@@ -217,6 +261,24 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
       <td>
         <span className={`pill ${cliente.status || 'ativo'}`}>{cliente.status || 'ativo'}</span>
       </td>
+      <td>
+        {cliente.email_relatorio ? (
+          cliente.receber_relatorio_semanal !== false ? (
+            <span className="badge-report-active" title={`Envio automático 1x por semana ativo para ${cliente.email_relatorio}`}>
+              <FiMail style={{ fontSize: 12 }} />
+              <span className="badge-report-email">{cliente.email_relatorio}</span>
+              <span className="badge-report-freq">1x/sem</span>
+            </span>
+          ) : (
+            <span className="badge-report-paused" title={`Envio cancelado pelo cliente (e-mail cadastrado: ${cliente.email_relatorio})`}>
+              <FiMail style={{ fontSize: 12 }} />
+              <span>Cancelado</span>
+            </span>
+          )
+        ) : (
+          <span style={{ color: '#94a3b8', fontSize: 12 }}>Não configurado</span>
+        )}
+      </td>
       <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
         <button className="action-btn" title="Editar" onClick={() => setEditando(true)}>
           <FiEdit2 />
@@ -232,6 +294,8 @@ function LinhaCliente({ cliente, onMudou, onAbrir }) {
 function NovoClienteForm({ onCriado }) {
   const [nome, setNome] = useState('')
   const [plano, setPlano] = useState('trial')
+  const [emailRelatorio, setEmailRelatorio] = useState('')
+  const [receberRelatorioSemanal, setReceberRelatorioSemanal] = useState(true)
   const [erro, setErro] = useState(null)
   const [enviando, setEnviando] = useState(false)
 
@@ -239,11 +303,37 @@ function NovoClienteForm({ onCriado }) {
     e.preventDefault()
     setEnviando(true)
     setErro(null)
-    const { error } = await supabase.from('clientes').insert({ nome, plano, status: 'ativo' })
+
+    const payload = {
+      nome: nome.trim(),
+      plano,
+      status: 'ativo',
+      email_relatorio: emailRelatorio.trim() || null,
+      receber_relatorio_semanal: Boolean(receberRelatorioSemanal),
+    }
+
+    let { error } = await supabase.from('clientes').insert(payload)
+
+    // Tratamento resiliente caso a tabela ainda não tenha a nova coluna
+    if (error && error.code === 'PGRST204') {
+      const fallback = await supabase.from('clientes').insert({ nome: nome.trim(), plano, status: 'ativo' })
+      if (!fallback.error) {
+        alert('Cliente criado com sucesso!\n\nNota: Para persistir o e-mail de relatório semanal automático, execute o script "supabase_migration_relatorios.sql" no SQL Editor do seu Supabase.')
+        setNome('')
+        setEmailRelatorio('')
+        setEnviando(false)
+        onCriado()
+        return
+      }
+      error = fallback.error
+    }
+
     setEnviando(false)
     if (error) setErro('Não foi possível criar o cliente.')
     else {
       setNome('')
+      setEmailRelatorio('')
+      setReceberRelatorioSemanal(true)
       onCriado()
     }
   }
@@ -276,6 +366,34 @@ function NovoClienteForm({ onCriado }) {
             <option value="basico">Básico</option>
             <option value="pro">Pro</option>
           </select>
+        </div>
+        <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+          <label htmlFor="emailRelatorio" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FiMail style={{ color: '#0284c7' }} />
+            E-mail do Cliente para Relatório de Pesquisas
+          </label>
+          <input
+            id="emailRelatorio"
+            type="email"
+            className="text-input"
+            value={emailRelatorio}
+            placeholder="Ex: diretoria@empresa.com.br ou contato@empresa.com.br"
+            onChange={(e) => setEmailRelatorio(e.target.value)}
+          />
+          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+              <input
+                type="checkbox"
+                checked={receberRelatorioSemanal}
+                onChange={(e) => setReceberRelatorioSemanal(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: '#0284c7', cursor: 'pointer' }}
+              />
+              Receber relatório das pesquisas automaticamente 1x por semana
+            </label>
+          </div>
+          <span style={{ fontSize: 11, color: '#64748b', display: 'block', marginTop: 4 }}>
+            Você ou o cliente podem cancelar o envio automático a qualquer momento.
+          </span>
         </div>
       </div>
 

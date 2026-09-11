@@ -16,6 +16,7 @@ import {
   Trash2,
   Check,
   X,
+  Mail,
 } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import logo from '../img/LogoSatisfyWhite.svg'
@@ -340,12 +341,35 @@ function EdicaoCliente({ cliente, onCancelar, onSalvo }) {
   const [nome, setNome] = useState(cliente.nome)
   const [plano, setPlano] = useState(cliente.plano)
   const [status, setStatus] = useState(cliente.status)
+  const [emailRelatorio, setEmailRelatorio] = useState(cliente.email_relatorio || '')
+  const [receberRelatorioSemanal, setReceberRelatorioSemanal] = useState(cliente.receber_relatorio_semanal !== false)
   const [salvando, setSalvando] = useState(false)
 
   async function salvar(e) {
     if (e) e.preventDefault()
     setSalvando(true)
-    await supabase.from('clientes').update({ nome, plano, status }).eq('id', cliente.id)
+
+    const payload = {
+      nome: nome.trim(),
+      plano,
+      status,
+      email_relatorio: emailRelatorio.trim() || null,
+      receber_relatorio_semanal: Boolean(receberRelatorioSemanal),
+    }
+
+    let { error } = await supabase.from('clientes').update(payload).eq('id', cliente.id)
+
+    // Tratamento resiliente caso a tabela ainda não tenha a nova coluna
+    if (error && error.code === 'PGRST204') {
+      const fallback = await supabase.from('clientes').update({ nome: nome.trim(), plano, status }).eq('id', cliente.id)
+      if (!fallback.error) {
+        alert('Dados salvos!\n\nNota: Para persistir o e-mail de relatório semanal, execute o script "supabase_migration_relatorios.sql" no SQL Editor do seu Supabase.')
+        setSalvando(false)
+        onSalvo()
+        return
+      }
+    }
+
     setSalvando(false)
     onSalvo()
   }
@@ -394,6 +418,61 @@ function EdicaoCliente({ cliente, onCancelar, onSalvo }) {
             <option value="cancelado">Cancelado</option>
           </select>
         </div>
+      </div>
+
+      {/* Seção de Relatórios Semanais Automáticos */}
+      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+          <label htmlFor="editEmailRelatorio" style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+            <Mail style={{ width: 16, height: 16, color: '#0284c7' }} />
+            E-mail para Recebimento de Relatórios Semanais
+          </label>
+          {emailRelatorio && (
+            <button
+              type="button"
+              onClick={() => setReceberRelatorioSemanal(!receberRelatorioSemanal)}
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '4px 10px',
+                borderRadius: 6,
+                border: '1px solid',
+                cursor: 'pointer',
+                borderColor: receberRelatorioSemanal ? '#fca5a5' : '#86efac',
+                background: receberRelatorioSemanal ? '#fef2f2' : '#f0fdf4',
+                color: receberRelatorioSemanal ? '#b91c1c' : '#15803d',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {receberRelatorioSemanal ? 'Cancelar envio automático' : 'Reativar envio automático'}
+            </button>
+          )}
+        </div>
+
+        <input
+          id="editEmailRelatorio"
+          type="email"
+          className="text-input"
+          value={emailRelatorio}
+          onChange={(e) => setEmailRelatorio(e.target.value)}
+          placeholder="Ex: gestao@empresa.com.br"
+          style={{ width: '100%', boxSizing: 'border-box' }}
+        />
+
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+            <input
+              type="checkbox"
+              checked={receberRelatorioSemanal}
+              onChange={(e) => setReceberRelatorioSemanal(e.target.checked)}
+              style={{ width: 16, height: 16, accentColor: '#0284c7', cursor: 'pointer' }}
+            />
+            <span>Enviar relatório consolidado das pesquisas automaticamente <strong>1x por semana</strong></span>
+          </label>
+        </div>
+        <p style={{ margin: '6px 0 0 0', fontSize: 11, color: '#64748b' }}>
+          Caso o cliente não queira mais receber os relatórios, desmarque a opção acima ou clique em "Cancelar envio automático".
+        </p>
       </div>
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

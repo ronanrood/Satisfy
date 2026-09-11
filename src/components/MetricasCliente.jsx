@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { relatorioService } from '../services/relatorioService'
 import { 
   FiMessageSquare, 
   FiHome, 
@@ -8,7 +9,11 @@ import {
   FiPrinter, 
   FiUser,
   FiChevronDown,
-  FiPhone
+  FiPhone,
+  FiSend,
+  FiMail,
+  FiCheckCircle,
+  FiX
 } from 'react-icons/fi'
 import {
   ResponsiveContainer,
@@ -46,6 +51,55 @@ export default function MetricasCliente({ clienteId }) {
       return true
     }
   })
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [modalSucessoAberto, setModalSucessoAberto] = useState(false)
+  const [modalEmailPromptAberto, setModalEmailPromptAberto] = useState(false)
+  const [emailInputTemporario, setEmailInputTemporario] = useState('')
+  const [resultadoEnvio, setResultadoEnvio] = useState(null)
+
+  async function handleEnviarRelatorio30Dias(emailManual = null) {
+    try {
+      setEnviandoEmail(true)
+      // 1. Busca dados do cliente para obter e-mail cadastrado
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('id', clienteId)
+        .maybeSingle()
+
+      const emailDestino = (emailManual || cliente?.email_relatorio || '').trim()
+
+      if (!emailDestino) {
+        setEmailInputTemporario('')
+        setModalEmailPromptAberto(true)
+        setEnviandoEmail(false)
+        return
+      }
+
+      // Se foi informado manualmente e o cliente ainda não tinha gravado
+      if (emailManual && (!cliente?.email_relatorio || cliente.email_relatorio !== emailManual)) {
+        try {
+          await supabase.from('clientes').update({ email_relatorio: emailManual }).eq('id', clienteId)
+        } catch {
+          // ignore se coluna não existir
+        }
+      }
+
+      const res = await relatorioService.enviarRelatorio30Dias(
+        cliente || { id: clienteId, nome: 'Cliente' },
+        emailDestino
+      )
+
+      setResultadoEnvio(res)
+      setModalEmailPromptAberto(false)
+      setModalSucessoAberto(true)
+    } catch (err) {
+      console.error('Erro ao enviar relatório por e-mail:', err)
+      alert(`Erro ao enviar relatório: ${err.message || 'Falha no envio'}`)
+    } finally {
+      setEnviandoEmail(false)
+    }
+  }
 
   const alternarRecentes = () => {
     setRecentesAberto((prev) => {
@@ -123,12 +177,21 @@ export default function MetricasCliente({ clienteId }) {
         </div>
 
         {respostas.length > 0 && (
-          <div className="export-actions" style={{ display: 'flex', gap: 10 }}>
+          <div className="export-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn-export-csv" onClick={() => exportarCSV(respostas)}>
               <FiDownload /> Exportar CSV
             </button>
             <button className="btn-export-csv" onClick={() => window.print()}>
               <FiPrinter /> Exportar PDF
+            </button>
+            <button
+              className="btn-export-email"
+              onClick={() => handleEnviarRelatorio30Dias()}
+              disabled={enviandoEmail}
+              title="Enviar relatório dos últimos 30 dias por e-mail para o cliente"
+            >
+              <FiSend />
+              <span>{enviandoEmail ? 'Enviando...' : 'Enviar por E-mail (30 dias)'}</span>
             </button>
           </div>
         )}
@@ -438,6 +501,112 @@ export default function MetricasCliente({ clienteId }) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Pop-up: E-mail Enviado com Sucesso */}
+      {modalSucessoAberto && (
+        <div className="modal-email-overlay" onClick={() => setModalSucessoAberto(false)}>
+          <div className="modal-email-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-email-icon-success">
+              <FiCheckCircle />
+            </div>
+
+            <h3 className="modal-email-title">Relatório Enviado com Sucesso!</h3>
+            
+            <p className="modal-email-subtitle">
+              O relatório consolidado dos <strong>últimos 30 dias</strong> foi gerado e enviado com sucesso para:
+            </p>
+
+            <div className="modal-email-chip">
+              <FiMail style={{ color: '#0284c7' }} />
+              <span>{resultadoEnvio?.email}</span>
+            </div>
+
+            {resultadoEnvio?.dados && (
+              <div className="modal-email-stats-box">
+                <div className="modal-email-stat">
+                  <strong>{resultadoEnvio.dados.totalRespostas}</strong>
+                  <span>Respostas</span>
+                </div>
+                <div className="modal-email-stat">
+                  <strong>{resultadoEnvio.dados.mediaNota}</strong>
+                  <span>Nota Média</span>
+                </div>
+                <div className="modal-email-stat">
+                  <strong>{resultadoEnvio.dados.npsScore}</strong>
+                  <span>NPS Score</span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 22 }}>
+              <button
+                type="button"
+                className="btn-action-primary"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => setModalSucessoAberto(false)}
+              >
+                OK, Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Pop-up: Solicitar E-mail do Cliente caso não cadastrado */}
+      {modalEmailPromptAberto && (
+        <div className="modal-email-overlay" onClick={() => setModalEmailPromptAberto(false)}>
+          <div className="modal-email-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-email-icon-info">
+              <FiMail />
+            </div>
+
+            <h3 className="modal-email-title">Enviar Relatório por E-mail</h3>
+            
+            <p className="modal-email-subtitle">
+              Nenhum e-mail de relatório foi encontrado no cadastro deste cliente. Digite o e-mail de destino para enviar o relatório dos últimos 30 dias:
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (emailInputTemporario.trim()) {
+                  handleEnviarRelatorio30Dias(emailInputTemporario.trim())
+                }
+              }}
+              style={{ marginTop: 14 }}
+            >
+              <input
+                type="email"
+                className="text-input"
+                placeholder="Ex: diretoria@empresa.com.br"
+                value={emailInputTemporario}
+                onChange={(e) => setEmailInputTemporario(e.target.value)}
+                required
+                autoFocus
+                style={{ width: '100%', boxSizing: 'border-box', marginBottom: 14 }}
+              />
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ flex: 1, justifyContent: 'center' }}
+                  onClick={() => setModalEmailPromptAberto(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-action-primary"
+                  style={{ flex: 2, justifyContent: 'center' }}
+                  disabled={enviandoEmail || !emailInputTemporario.trim()}
+                >
+                  {enviandoEmail ? 'Enviando...' : 'Enviar Relatório'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
